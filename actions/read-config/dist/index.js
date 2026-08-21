@@ -35606,6 +35606,21 @@ function escapeHtml(text) {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Shared by every action that treats a missing file as a normal case, not a
+// crash (read-config's config file, nf-test's TAP file, validate-patch's
+// patch file).
+/**
+ * Node's fs errors always carry a string .code, regardless of which realm
+ * constructed them. Checking that shape, rather than `instanceof Error`,
+ * avoids a cross-realm false negative under Jest's experimental VM modules.
+ */
+function isEnoent(error) {
+    return (typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'ENOENT');
+}
+
 /**
  * Writes the job summary and never throws. core.summary.write() throws when
  * GITHUB_STEP_SUMMARY is unset or unwritable, for example a local run or
@@ -35868,15 +35883,6 @@ function warnUnknownCiKeys(config) {
     }
 }
 
-// Node's fs errors always carry a string .code, regardless of which realm
-// constructed them. Checking that shape, rather than `instanceof Error`,
-// avoids a cross-realm false negative under Jest's experimental VM modules.
-function isEnoent(error) {
-    return (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'ENOENT');
-}
 /**
  * Resolves 'config-file' against the workspace and rejects a path that
  * escapes it, so a caller can't read an arbitrary file on the runner

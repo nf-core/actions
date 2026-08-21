@@ -63,3 +63,11 @@ Lessons from past stage reviews, so a new stage does not repeat them:
 - Validate a README workflow example with actionlint, and also reason through it
   by hand: actionlint checks syntax, not whether the workflow would actually
   work.
+- Escape every value that comes from outside an action (a config file, a
+  comment, a file name, a test name) before it reaches a job summary, and encode
+  it before it reaches a log. This applies to a new action too: writing a
+  summary or logging a value inherits this rule. It was fixed in two actions and
+  then reintroduced in a third one stage later, which is why it is written down
+  here.
+- A privileged job (one holding a secret or a push credential) runs no
+  third-party action. Use `gh` or a first-party action instead.

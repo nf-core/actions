@@ -134,10 +134,16 @@ jobs:
         uses: $/actions/get-shards
         with:
           max-shards: ${{ needs.config.outputs.max-shards }}
-          # Must match the 'nf-test' job's profile (test,<engine>) and
-          # changed-since: a different value here could select a different
-          # test set than the matrix runs, and the nf-test action treats
-          # zero tests as a hard failure.
+          # The shard count is enumerated once here, using only the first
+          # entry of test-profiles, even though the 'nf-test' job below fans
+          # out over every entry of test-profiles with this one
+          # total-shards. This assumes nf-test selects tests by file and tag,
+          # not by profile, so the count is the same for every profile. A
+          # pipeline whose test selection varies by profile would break that
+          # assumption. changed-since must match the 'nf-test' job's value: a
+          # different value here could select a different test set than the
+          # matrix runs, and the nf-test action treats zero tests as a hard
+          # failure.
           profile: test,${{ fromJSON(needs.config.outputs.test-profiles)[0] }}
           changed-since: ${{ needs.config.outputs.changed-since }}
 

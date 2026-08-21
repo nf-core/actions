@@ -1,0 +1,35 @@
+name: Validate a lint-fix patch
+description: >-
+  Validates an untrusted git patch before a privileged job applies and pushes
+  it. Rejects anything that is not a plain, size-capped, well-formed git patch
+  that applies cleanly to the current tree, and logs the files it touches and
+  their diffstat as an audit trail. Does not apply the patch itself.
+author: nf-core
+
+inputs:
+  patch-path:
+    description: Path to the patch file to validate.
+    required: true
+  max-size-bytes:
+    description: >-
+      Upper bound on the patch file's size, in bytes. Must be a positive
+      integer.
+    required: false
+    default: '5242880'
+
+outputs:
+  has-patch:
+    description: >-
+      Whether a patch file was present at 'patch-path', as the string 'true' or
+      'false'. 'false' when there is no file there at all: the normal case when
+      a linter made no changes. Every other problem (wrong file type, an empty
+      or oversized file, a malformed patch, or one that does not apply) fails
+      the action instead.
+  files-changed:
+    description: >-
+      Number of files the patch touches, as a plain number in a string. '0' when
+      has-patch is 'false'.
+
+runs:
+  using: node24
+  main: dist/index.js

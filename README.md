@@ -337,6 +337,15 @@ Every other setting — `nf-test-version`, `nextflow-versions`, `profiles`,
 keeps two pipelines' stubs byte-identical: only a call that genuinely needs a
 different runner or a different hardware flavour sets an input at all.
 
+### Shard count assumes profile-independent test selection
+
+`nf-test-changes` enumerates the shard count once, from the dry run of only the
+first entry in `test-profiles`, while the `nf-test` job fans out over every
+entry with that one `total-shards`. This assumes nf-test selects tests by file
+and tag, not by profile, so the count is the same whichever profile ran the dry
+run. A pipeline whose test selection genuinely varies by profile would break
+that assumption and could get an uneven shard split.
+
 ### ARM or GPU variant
 
 A pipeline that also validates on ARM keeps a second, equally small stub file
@@ -438,6 +447,209 @@ pipelines do today: this fix does not change the behaviour, only documents it.
 In short: a fork pull request is unaffected; a same-repository branch from a
 contributor with write access is trusted with these secrets, the same as any
 other secret a workflow makes available to a non-fork pull request.
+
+## The `validate-patch` action
+
+The [`validate-patch`](actions/validate-patch) action is the last gate before a
+privileged job applies an untrusted patch and pushes it. It does not apply the
+patch; it only decides whether the patch is safe to apply, and logs an audit
+trail of what it contains.
+
+```yaml
+- name: Validate the patch
+  uses: nf-core/actions/actions/validate-patch@v1
+  with:
+    patch-path: ${{ runner.temp }}/lint-fix/lint-fix.patch
+```
+
+Given `patch-path`, it rejects, each with its own message:
+
+- a path that is not a regular file, including a symlink (an uploaded artifact
+  can contain one);
+- an empty file;
+- a file over `max-size-bytes` (default 5 MiB, generous for a formatting diff
+  and far below anything that should reach a privileged job);
+- a file that is not a valid git patch, checked independently of the current
+  tree (`git apply --numstat`);
+- a well-formed patch that no longer applies to the current tree
+  (`git apply --check`), for example because the branch moved after the patch
+  was built.
+
+A missing file at `patch-path` is not an error: `has-patch` is `false`, which is
+the normal outcome when a linter made no changes. Every other problem above
+fails the action. On success, it logs the touched files and the diffstat, and
+publishes `files-changed`, so the run's log and summary show what the privileged
+job is about to commit before it commits it.
+
+`validate-patch` never passes `--unsafe-paths` to `git apply`, relying on git's
+own refusal to write outside the checkout.
+
+**What it deliberately does not block.** It does not reject a patch that touches
+`.github/workflows/**`, `.nf-core.yml`, or any other specific path. The linter
+this repo runs (`prek`, see below) legitimately reformats YAML, including
+workflow files, so blocking changes to them would break real fixes, not just
+attacks. Three things bound the residual risk instead: the commit lands on the
+pull request's own branch, still subject to normal review before merge, not on a
+protected branch directly; GitHub itself refuses a push that touches
+`.github/workflows/**` from a token without the `workflow` OAuth scope, so
+keeping that scope off the bot's token (if operationally possible) closes this
+specific escalation path independently of this action; and `prepare-fix` (below)
+never holds a credential, so a hostile pre-commit hook running there has nothing
+to steal even if it tries. A maintainer reviewing a bot-authored "automated lint
+fix" commit should give it the same scrutiny as a human-authored one: the commit
+message does not imply the diff was checked for anything beyond being a
+well-formed, applying patch.
+
+## The `fix-linting.yml` workflow
+
+[`fix-linting.yml`](.github/workflows/fix-linting.yml) implements the
+`@nf-core-bot fix linting` pull request comment command. It replaces a vendored
+workflow that ran a pull request's own lint hooks in the same job that held the
+bot's push credential: hook code the pull request defines could read that
+credential. This workflow never does that. See SECURITY.md for the trust
+boundary it follows, and PLAN.md's principle 4 for the design rule.
+
+### Three jobs, one trust boundary
+
+- **`acknowledge`** gates the whole run. It runs only when the comment is on a
+  pull request and contains the command, then checks the commenter's permission
+  against the repository (via the API, not `author_association`, which reflects
+  a user's relationship to the repository, not their current permission level)
+  and whether the pull request's head branch is protected. See
+  [Branch protection and the commenter gate](#branch-protection-and-the-commenter-gate)
+  for the exact rule. Holds `contents: read`, to look up the pull request and
+  the branch, and `issues: write`, to react to the comment; it never checks out
+  the pull request.
+- **`prepare-fix`** checks out the pull request and runs its lint hooks
+  (`prek`). This is untrusted code. It holds `contents: read` and
+  `pull-requests: read`, nothing that can write, and no secret is referenced
+  anywhere in the job. The checkout does not persist credentials. If the hooks
+  changed anything, it stages the change and builds a binary git patch from the
+  staged diff, and uploads it as an artifact; a hook failure that produces no
+  patch fails the job outright. It never commits: `push-fix` (below) is the only
+  job that creates a commit.
+- **`push-fix`** holds the credential. It re-checks out the pull request head
+  and confirms it still matches the SHA `prepare-fix` ran against (the patch no
+  longer describes the tree otherwise), downloads and validates the patch with
+  `validate-patch` above, applies it, and commits and pushes as the bot with
+  hooks and GPG signing explicitly disabled for those two commands. It never
+  runs a file that came from the pull request.
+
+Every comment reaction (`eyes`, `+1`, `hooray`, `confused`) is posted with
+`gh api`, not a third-party action: `push-fix` holds the bot's credential, and a
+privileged job runs no third-party action, so the reaction there could not use
+one anyway. `acknowledge` uses the same `gh api` call for consistency, even
+though it is not itself privileged.
+
+### Branch protection and the commenter gate
+
+`push-fix` pushes with the bot's organisation-wide token. A collaborator with
+plain `write` access cannot push to a protected branch directly, so admitting
+any `write` user here would turn the bot into a way around that: the contributor
+controls `.pre-commit-config.yaml` and every hook `prepare-fix` runs, so the
+"lint fix" patch it produces can contain any diff at all.
+
+`acknowledge` decides using `GET /repos/{owner}/{repo}/branches/{branch}` on the
+pull request's head branch, read with `contents: read`. It does not use the
+branch-protection endpoint itself
+(`GET /repos/{owner}/{repo}/branches/{branch}/protection`): that one needs
+`admin` on the repository, which this job does not hold and should not need just
+to decide whether to run.
+
+| Head branch   | Author                     | `write` / `admin` collaborator |
+| ------------- | -------------------------- | ------------------------------ |
+| Not protected | Allowed                    | Allowed                        |
+| Protected     | **Denied** (needs `admin`) | Allowed only with `admin`      |
+
+A release pull request's head branch is typically protected, so its own author
+gets no exemption there: the bot would otherwise push to a protected branch on
+the author's behalf, which the author could not do by pushing directly
+themselves. On an ordinary, unprotected branch, the author exemption is
+unchanged: the bot only ever pushes to the author's own branch, so letting them
+trigger it grants them nothing beyond what pushing to it themselves already
+would.
+
+A failed lookup (the pull request API call, the branch API call, or the
+collaborator-permission API call) denies the request and prints why, instead of
+the job aborting silently: a maintainer commenting on someone else's pull
+request sees a clear reason if the check itself could not run, not a missing
+reaction and no explanation.
+
+### Configuration
+
+`prepare-fix` reads `.nf-core.yml` before checking out the pull request, so a
+setting used to run the pull request's own hooks comes from the repository's own
+default branch, not from the pull request under test. Today that is one value:
+the Nextflow version, taken from `read-config`'s existing `nextflow-versions`
+output (the first configured version), the same setting `nf-test.yml`'s dry run
+uses. `prek` itself needs no separate version setting: its action pin already
+fixes a version, and every hook's own version is already pinned in the
+pipeline's own `.pre-commit-config.yaml`. Nothing new was added to
+`.nf-core.yml` for this workflow.
+
+### Pipeline stub
+
+```yaml
+# .github/workflows/fix-linting.yml in a pipeline repo
+name: fix-linting
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+
+permissions: {}
+
+jobs:
+  fix-linting:
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: read
+    uses: nf-core/actions/.github/workflows/fix-linting.yml@v1
+    secrets:
+      BOT_TOKEN: ${{ secrets.nf_core_bot_auth_token }}
+```
+
+`BOT_TOKEN` is optional and named explicitly: this stub never uses
+`secrets: inherit`. Omitting it is valid syntax, but every job that needs it
+then fails with a clear message instead of silently pushing with the workflow's
+own default token. `secrets.nf_core_bot_auth_token` above is the existing
+organisation secret already available to nf-core pipeline repos; only the name
+on the left, `BOT_TOKEN`, is this workflow's own contract, so a pipeline whose
+bot secret is named differently only needs to change the right-hand side.
+
+The calling job grants `actions: read`, `contents: read`, `issues: write`, and
+`pull-requests: read`: the union of what `fix-linting.yml`'s three jobs request
+between them. A called workflow can only narrow the permissions the calling job
+holds, never widen them, so a job here that granted only, say, `contents: read`
+would make GitHub reject the run at validation the moment `push-fix` tried to
+use `issues: write` to react to the comment.
+
+The `concurrency` group has no `cancel-in-progress`: a second "fix linting"
+comment on the same pull request queues behind the first instead of racing it
+mid-push, which could otherwise fail with a non-fast-forward push.
+
+### Migrating from the vendored workflow
+
+- **Job names changed.** The vendored workflow's single `fix-linting` job (or
+  the two-job `prepare-fix` / `push-fix` split some pipelines already carry)
+  becomes `acknowledge`, `prepare-fix`, and `push-fix`. Update branch protection
+  or status checks that name the old job, if any did.
+- **The bot secret is now named and passed explicitly.** A stub that checked out
+  or pushed directly with `secrets.nf_core_bot_auth_token` (or used
+  `secrets: inherit`) now passes it as `BOT_TOKEN` in the `secrets:` block
+  above; the reusable workflow fails clearly if it is missing, rather than
+  falling back to the default token.
+- **The commenter gate is stricter.** A comment from someone with neither write
+  access nor pull request authorship is now rejected before anything runs,
+  checked against the API rather than `author_association`.
+- **No custom `.pre-commit-config.yaml` handling changed.** `prepare-fix` runs
+  `prek` the same way the vendored workflow ran it; a pipeline's own hook
+  configuration needs no change.
 
 ## Tag policy
 

@@ -91,3 +91,47 @@ describe('wiring', () => {
     expect(text).toContain('Changed-since: (everything)')
   })
 })
+
+// profiles comes from read-config's 'profiles' output, which in turn comes
+// from 'ci.profiles' in the pipeline's .nf-core.yml: a contributor's own
+// content on a pull request.
+describe('untrusted profile values', () => {
+  it('escapes angle brackets and an ampersand in the summary', async () => {
+    // 'release' forces the full profile set, so both entries reach the
+    // summary; 'docker' alone would be reduced away otherwise.
+    setInputs({
+      profiles: '["<b>a & b</b>","docker"]',
+      'event-name': 'release'
+    })
+    await run()
+    const [text] = summary.addRaw!.mock.calls[0] as [string]
+    expect(text).toContain('&lt;b&gt;a &amp; b&lt;/b&gt;')
+    expect(text).not.toContain('<b>')
+  })
+
+  it('escapes the reason text in the summary too', async () => {
+    setInputs({
+      profiles: '["<img>","other"]',
+      'event-name': 'pull_request',
+      'base-ref': 'dev'
+    })
+    await run()
+    const [text] = summary.addRaw!.mock.calls[0] as [string]
+    expect(text).not.toContain('<img>')
+    expect(text).toContain('&lt;img&gt;')
+  })
+
+  it('JSON-encodes a profile containing a newline and a workflow command before logging', async () => {
+    setInputs({
+      profiles: '["evil\\n::error::pwned","other"]',
+      'event-name': 'pull_request',
+      'base-ref': 'dev'
+    })
+    await run()
+    const loggedLines = info.mock.calls.map((call) => call[0] as string)
+    expect(loggedLines.some((line) => line.includes('\n::error::'))).toBe(false)
+    expect(loggedLines.some((line) => line.includes('\\n::error::pwned'))).toBe(
+      true
+    )
+  })
+})

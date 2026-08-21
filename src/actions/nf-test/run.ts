@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import * as core from '@actions/core'
 import { encodeOutput } from '../../lib/encode-output.js'
 import { escapeHtml } from '../../lib/escape-html.js'
+import { isEnoent } from '../../lib/is-enoent.js'
 import { getInputOrDefault } from '../../lib/optional-input.js'
 import { DEFAULT_CHANGED_SINCE, runNfTest } from '../../lib/run-nf-test.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
@@ -47,18 +48,6 @@ function readInputs(): NfTestInputs {
     verbose: parseVerbose(core.getInput('verbose')),
     extraArgs: parseExtraArgs(core.getInput('extra-args'))
   }
-}
-
-// Node's fs errors always carry a string .code, regardless of which realm
-// constructed them. Checking that shape, rather than `instanceof Error`,
-// avoids a cross-realm false negative under Jest's experimental VM modules.
-function isEnoent(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 'ENOENT'
-  )
 }
 
 /**

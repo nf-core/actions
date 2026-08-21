@@ -4,6 +4,7 @@ import * as core from '@actions/core'
 import { type Document, parseDocument } from 'yaml'
 import { encodeOutput } from '../../lib/encode-output.js'
 import { escapeHtml } from '../../lib/escape-html.js'
+import { isEnoent } from '../../lib/is-enoent.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
 import { DEFAULT_CONFIG_FILE, SETTINGS } from './registry.js'
 import { resolveSetting, warnUnknownCiKeys, type Source } from './resolve.js'
@@ -12,18 +13,6 @@ interface Row {
   setting: string
   value: string
   source: Source
-}
-
-// Node's fs errors always carry a string .code, regardless of which realm
-// constructed them. Checking that shape, rather than `instanceof Error`,
-// avoids a cross-realm false negative under Jest's experimental VM modules.
-function isEnoent(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 'ENOENT'
-  )
 }
 
 /**

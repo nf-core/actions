@@ -29577,6 +29577,21 @@ function escapeHtml(text) {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Shared by every action that treats a missing file as a normal case, not a
+// crash (read-config's config file, nf-test's TAP file, validate-patch's
+// patch file).
+/**
+ * Node's fs errors always carry a string .code, regardless of which realm
+ * constructed them. Checking that shape, rather than `instanceof Error`,
+ * avoids a cross-realm false negative under Jest's experimental VM modules.
+ */
+function isEnoent(error) {
+    return (typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'ENOENT');
+}
+
 // core.getInput() cannot tell "input absent" from "input supplied empty": it
 // reads the same environment variable either way, and returns '' for both.
 // Reading that variable directly restores the distinction.
@@ -29856,15 +29871,6 @@ function readInputs() {
         verbose: parseVerbose(getInput('verbose')),
         extraArgs: parseExtraArgs(getInput('extra-args'))
     };
-}
-// Node's fs errors always carry a string .code, regardless of which realm
-// constructed them. Checking that shape, rather than `instanceof Error`,
-// avoids a cross-realm false negative under Jest's experimental VM modules.
-function isEnoent(error) {
-    return (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'ENOENT');
 }
 /**
  * Reads the TAP file nf-test wrote. Empty string if nf-test crashed before
