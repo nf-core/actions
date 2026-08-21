@@ -137,14 +137,22 @@ export async function run(): Promise<void> {
 
   const header = validateHeader(raw.headerRaw)
   const prNumberClaim = validatePrNumber(raw.prNumberRaw)
+  const { bodyRaw, resolvedRaw } = raw
 
   // A blank comment.md (present but empty, for example a lint run a
-  // timeout killed after creating the file but before writing to it)
-  // means the same thing as an absent one: nothing to say. Posting it
-  // would otherwise overwrite a real earlier report with nothing.
-  if (raw.bodyRaw === undefined || raw.bodyRaw.trim() === '') {
+  // timeout killed after creating the file but before writing to it) means
+  // the same thing as an absent one: nothing to say. Posting it would
+  // otherwise overwrite a real earlier report with nothing.
+  //
+  // Neither a report nor a resolution: nothing to do, and (since there is
+  // nothing that could change an existing comment either way) nothing to
+  // check for one. Every producer that has never heard of resolved.md
+  // keeps exactly today's fast no-op, with no API call at all.
+  const commentAbsent = bodyRaw === undefined || bodyRaw.trim() === ''
+  const resolvedAbsent = resolvedRaw === undefined || resolvedRaw.trim() === ''
+  if (commentAbsent && resolvedAbsent) {
     core.info(
-      `comment.md is absent or blank (header '${header}'). Nothing to say, not posting.`
+      `comment.md is absent or blank, and so is resolved.md (header '${header}'). Nothing to say.`
     )
     return
   }
@@ -172,8 +180,6 @@ export async function run(): Promise<void> {
 
   const selfLogin = await resolveAuthenticatedLogin(octokit)
   const marker = buildMarker(header)
-  const body = buildCommentBody(marker, sanitiseBody(raw.bodyRaw))
-
   const existingId = await findExistingCommentId(
     octokit,
     owner,
@@ -183,27 +189,55 @@ export async function run(): Promise<void> {
     selfLogin
   )
 
-  if (existingId !== undefined) {
-    await octokit.rest.issues.updateComment({
-      owner,
-      repo,
-      comment_id: existingId,
-      body
-    })
-    core.info(
-      `Updated comment ${String(existingId)} on pull request #${String(prNumberClaim)} (header '${header}').`
-    )
-  } else {
-    const created = await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: prNumberClaim,
-      body
-    })
-    core.info(
-      `Created comment ${String(created.data.id)} on pull request #${String(prNumberClaim)} (header '${header}').`
-    )
+  // comment.md, whenever present, always wins over resolved.md.
+  if (bodyRaw !== undefined && bodyRaw.trim() !== '') {
+    const body = buildCommentBody(marker, sanitiseBody(bodyRaw))
+    if (existingId !== undefined) {
+      await octokit.rest.issues.updateComment({
+        owner,
+        repo,
+        comment_id: existingId,
+        body
+      })
+      core.info(
+        `Updated comment ${String(existingId)} on pull request #${String(prNumberClaim)} (header '${header}').`
+      )
+    } else {
+      const created = await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: prNumberClaim,
+        body
+      })
+      core.info(
+        `Created comment ${String(created.data.id)} on pull request #${String(prNumberClaim)} (header '${header}').`
+      )
+    }
+    await writeOutcomeSummary(header, prNumberClaim, existingId !== undefined)
+    return
   }
 
-  await writeOutcomeSummary(header, prNumberClaim, existingId !== undefined)
+  // comment.md is absent or blank here, so the guard above guarantees
+  // resolved.md is not. It only ever updates an earlier comment, never
+  // creates one: with nothing posted yet, there is nothing to resolve.
+  if (existingId === undefined) {
+    core.info(
+      `resolved.md is present but no earlier '${header}' comment exists. Nothing to update.`
+    )
+    return
+  }
+  if (resolvedRaw === undefined || resolvedRaw.trim() === '') {
+    return // Unreachable: ruled out by the guard above.
+  }
+  const body = buildCommentBody(marker, sanitiseBody(resolvedRaw))
+  await octokit.rest.issues.updateComment({
+    owner,
+    repo,
+    comment_id: existingId,
+    body
+  })
+  core.info(
+    `Updated comment ${String(existingId)} on pull request #${String(prNumberClaim)} (header '${header}') to its resolved text.`
+  )
+  await writeOutcomeSummary(header, prNumberClaim, true)
 }

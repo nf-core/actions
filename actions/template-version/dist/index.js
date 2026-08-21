@@ -2,7 +2,7 @@ import * as os from 'os';
 import os__default, { EOL } from 'os';
 import 'crypto';
 import * as fs from 'fs';
-import { promises, constants as constants$5, existsSync, readFileSync } from 'fs';
+import { promises, constants as constants$6, existsSync, readFileSync } from 'fs';
 import 'path';
 import http from 'http';
 import https from 'https';
@@ -32,7 +32,7 @@ import require$$1$5 from 'node:dns';
 import require$$5$3 from 'string_decoder';
 import 'child_process';
 import 'timers';
-import { lstatSync, readFileSync as readFileSync$1 } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // We use any as a valid input type
@@ -951,12 +951,12 @@ function requireErrors () {
 	return errors;
 }
 
-var constants$4;
-var hasRequiredConstants$4;
+var constants$5;
+var hasRequiredConstants$5;
 
-function requireConstants$4 () {
-	if (hasRequiredConstants$4) return constants$4;
-	hasRequiredConstants$4 = 1;
+function requireConstants$5 () {
+	if (hasRequiredConstants$5) return constants$5;
+	hasRequiredConstants$5 = 1;
 
 	/** @type {Record<string, string | undefined>} */
 	const headerNameLowerCasedRecord = {};
@@ -1070,11 +1070,11 @@ function requireConstants$4 () {
 	// Note: object prototypes should not be able to be referenced. e.g. `Object#hasOwnProperty`.
 	Object.setPrototypeOf(headerNameLowerCasedRecord, null);
 
-	constants$4 = {
+	constants$5 = {
 	  wellknownHeaderNames,
 	  headerNameLowerCasedRecord
 	};
-	return constants$4;
+	return constants$5;
 }
 
 var tree_1;
@@ -1087,7 +1087,7 @@ function requireTree () {
 	const {
 	  wellknownHeaderNames,
 	  headerNameLowerCasedRecord
-	} = requireConstants$4();
+	} = requireConstants$5();
 
 	class TstNode {
 	  /** @type {any} */
@@ -1254,7 +1254,7 @@ function requireUtil$7 () {
 	const { stringify } = require$$7;
 	const { EventEmitter: EE } = require$$8;
 	const { InvalidArgumentError } = requireErrors();
-	const { headerNameLowerCasedRecord } = requireConstants$4();
+	const { headerNameLowerCasedRecord } = requireConstants$5();
 	const { tree } = requireTree();
 
 	const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(v => Number(v));
@@ -2201,7 +2201,7 @@ function requireRequest$1 () {
 	  normalizedMethodRecords
 	} = requireUtil$7();
 	const { channels } = requireDiagnostics();
-	const { headerNameLowerCasedRecord } = requireConstants$4();
+	const { headerNameLowerCasedRecord } = requireConstants$5();
 
 	// Verifies that a given path is valid does not contain control chars \x00 to \x20
 	const invalidPathRegex = /[^\u0021-\u00ff]/;
@@ -3557,7 +3557,7 @@ function requireConnect () {
 	return connect;
 }
 
-var constants$3 = {};
+var constants$4 = {};
 
 var utils = {};
 
@@ -3583,11 +3583,11 @@ function requireUtils () {
 	return utils;
 }
 
-var hasRequiredConstants$3;
+var hasRequiredConstants$4;
 
-function requireConstants$3 () {
-	if (hasRequiredConstants$3) return constants$3;
-	hasRequiredConstants$3 = 1;
+function requireConstants$4 () {
+	if (hasRequiredConstants$4) return constants$4;
+	hasRequiredConstants$4 = 1;
 	(function (exports) {
 		Object.defineProperty(exports, "__esModule", { value: true });
 		exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
@@ -3860,8 +3860,8 @@ function requireConstants$3 () {
 		    'upgrade': HEADER_STATE.UPGRADE,
 		};
 		
-	} (constants$3));
-	return constants$3;
+	} (constants$4));
+	return constants$4;
 }
 
 var llhttpWasm;
@@ -3890,12 +3890,12 @@ function requireLlhttp_simdWasm () {
 	return llhttp_simdWasm;
 }
 
-var constants$2;
-var hasRequiredConstants$2;
+var constants$3;
+var hasRequiredConstants$3;
 
-function requireConstants$2 () {
-	if (hasRequiredConstants$2) return constants$2;
-	hasRequiredConstants$2 = 1;
+function requireConstants$3 () {
+	if (hasRequiredConstants$3) return constants$3;
+	hasRequiredConstants$3 = 1;
 
 	const corsSafeListedMethods = /** @type {const} */ (['GET', 'HEAD', 'POST']);
 	const corsSafeListedMethodsSet = new Set(corsSafeListedMethods);
@@ -3996,7 +3996,7 @@ function requireConstants$2 () {
 	]);
 	const subresourceSet = new Set(subresource);
 
-	constants$2 = {
+	constants$3 = {
 	  subresource,
 	  forbiddenMethods,
 	  requestBodyHeader,
@@ -4019,7 +4019,7 @@ function requireConstants$2 () {
 	  forbiddenMethodsSet,
 	  referrerPolicySet
 	};
-	return constants$2;
+	return constants$3;
 }
 
 var global$2;
@@ -5534,7 +5534,7 @@ function requireUtil$6 () {
 
 	const { Transform } = require$$0$2;
 	const zlib = require$$1$2;
-	const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = requireConstants$2();
+	const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = requireConstants$3();
 	const { getGlobalOrigin } = requireGlobal$1();
 	const { collectASequenceOfCodePoints, collectAnHTTPQuotedString, removeChars, parseMIMEType } = requireDataUrl();
 	const { performance } = require$$5$1;
@@ -8652,7 +8652,7 @@ function requireClientH1 () {
 	  kHTTPContext
 	} = requireSymbols$4();
 
-	const constants = requireConstants$3();
+	const constants = requireConstants$4();
 	const EMPTY_BUF = Buffer.alloc(0);
 	const FastBuffer = Buffer[Symbol.species];
 	const addListener = util.addListener;
@@ -17422,7 +17422,7 @@ function requireResponse () {
 	const {
 	  redirectStatusSet,
 	  nullBodyStatus
-	} = requireConstants$2();
+	} = requireConstants$3();
 	const { kState, kHeaders } = requireSymbols$3();
 	const { webidl } = requireWebidl();
 	const { FormData } = requireFormdata();
@@ -18097,7 +18097,7 @@ function requireRequest () {
 	  requestCredentials,
 	  requestCache,
 	  requestDuplex
-	} = requireConstants$2();
+	} = requireConstants$3();
 	const { kEnumerableProperty, normalizedMethodRecordsBase, normalizedMethodRecords } = util;
 	const { kHeaders, kSignal, kState, kDispatcher } = requireSymbols$3();
 	const { webidl } = requireWebidl();
@@ -19175,7 +19175,7 @@ function requireFetch () {
 	  safeMethodsSet,
 	  requestBodyHeader,
 	  subresourceSet
-	} = requireConstants$2();
+	} = requireConstants$3();
 	const EE = require$$8;
 	const { Readable, pipeline, finished } = require$$0$2;
 	const { addAbortListener, isErrored, isReadable, bufferToLowerCasedHeaderName } = requireUtil$7();
@@ -23564,12 +23564,12 @@ function requireCachestorage () {
 	return cachestorage;
 }
 
-var constants$1;
-var hasRequiredConstants$1;
+var constants$2;
+var hasRequiredConstants$2;
 
-function requireConstants$1 () {
-	if (hasRequiredConstants$1) return constants$1;
-	hasRequiredConstants$1 = 1;
+function requireConstants$2 () {
+	if (hasRequiredConstants$2) return constants$2;
+	hasRequiredConstants$2 = 1;
 
 	// https://wicg.github.io/cookie-store/#cookie-maximum-attribute-value-size
 	const maxAttributeValueSize = 1024;
@@ -23577,11 +23577,11 @@ function requireConstants$1 () {
 	// https://wicg.github.io/cookie-store/#cookie-maximum-name-value-pair-size
 	const maxNameValuePairSize = 4096;
 
-	constants$1 = {
+	constants$2 = {
 	  maxAttributeValueSize,
 	  maxNameValuePairSize
 	};
-	return constants$1;
+	return constants$2;
 }
 
 var util$2;
@@ -23945,13 +23945,13 @@ function requireUtil$2 () {
 }
 
 var parse$2;
-var hasRequiredParse;
+var hasRequiredParse$1;
 
-function requireParse () {
-	if (hasRequiredParse) return parse$2;
-	hasRequiredParse = 1;
+function requireParse$1 () {
+	if (hasRequiredParse$1) return parse$2;
+	hasRequiredParse$1 = 1;
 
-	const { maxNameValuePairSize, maxAttributeValueSize } = requireConstants$1();
+	const { maxNameValuePairSize, maxAttributeValueSize } = requireConstants$2();
 	const { isCTLExcludingHtab } = requireUtil$2();
 	const { collectASequenceOfCodePointsFast } = requireDataUrl();
 	const assert = require$$0$1;
@@ -24269,7 +24269,7 @@ function requireCookies () {
 	if (hasRequiredCookies) return cookies;
 	hasRequiredCookies = 1;
 
-	const { parseSetCookie } = requireParse();
+	const { parseSetCookie } = requireParse$1();
 	const { stringify } = requireUtil$2();
 	const { webidl } = requireWebidl();
 	const { Headers } = requireHeaders();
@@ -24791,12 +24791,12 @@ function requireEvents () {
 	return events;
 }
 
-var constants;
-var hasRequiredConstants;
+var constants$1;
+var hasRequiredConstants$1;
 
-function requireConstants () {
-	if (hasRequiredConstants) return constants;
-	hasRequiredConstants = 1;
+function requireConstants$1 () {
+	if (hasRequiredConstants$1) return constants$1;
+	hasRequiredConstants$1 = 1;
 
 	// This is a Globally Unique Identifier unique used
 	// to validate that the endpoint accepts websocket
@@ -24851,7 +24851,7 @@ function requireConstants () {
 	  blob: 4
 	};
 
-	constants = {
+	constants$1 = {
 	  uid,
 	  sentCloseFrameState,
 	  staticPropertyDescriptors,
@@ -24862,7 +24862,7 @@ function requireConstants () {
 	  emptyBuffer,
 	  sendHints
 	};
-	return constants;
+	return constants$1;
 }
 
 var symbols;
@@ -24893,7 +24893,7 @@ function requireUtil$1 () {
 	hasRequiredUtil$1 = 1;
 
 	const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = requireSymbols();
-	const { states, opcodes } = requireConstants();
+	const { states, opcodes } = requireConstants$1();
 	const { ErrorEvent, createFastMessageEvent } = requireEvents();
 	const { isUtf8 } = require$$0;
 	const { collectASequenceOfCodePointsFast, removeHTTPWhitespace } = requireDataUrl();
@@ -25222,7 +25222,7 @@ function requireFrame () {
 	if (hasRequiredFrame) return frame;
 	hasRequiredFrame = 1;
 
-	const { maxUnsigned16Bit } = requireConstants();
+	const { maxUnsigned16Bit } = requireConstants$1();
 
 	const BUFFER_SIZE = 16386;
 
@@ -25326,7 +25326,7 @@ function requireConnection () {
 	if (hasRequiredConnection) return connection;
 	hasRequiredConnection = 1;
 
-	const { uid, states, sentCloseFrameState, emptyBuffer, opcodes } = requireConstants();
+	const { uid, states, sentCloseFrameState, emptyBuffer, opcodes } = requireConstants$1();
 	const {
 	  kReadyState,
 	  kSentClose,
@@ -25812,7 +25812,7 @@ function requireReceiver () {
 
 	const { Writable } = require$$0$2;
 	const assert = require$$0$1;
-	const { parserStates, opcodes, states, emptyBuffer, sentCloseFrameState } = requireConstants();
+	const { parserStates, opcodes, states, emptyBuffer, sentCloseFrameState } = requireConstants$1();
 	const { kReadyState, kSentClose, kResponse, kReceivedClose } = requireSymbols();
 	const { channels } = requireDiagnostics();
 	const {
@@ -26332,7 +26332,7 @@ function requireSender () {
 	hasRequiredSender = 1;
 
 	const { WebsocketFrameSend } = requireFrame();
-	const { opcodes, sendHints } = requireConstants();
+	const { opcodes, sendHints } = requireConstants$1();
 	const FixedQueue = requireFixedQueue();
 
 	/** @type {typeof Uint8Array} */
@@ -26446,7 +26446,7 @@ function requireWebsocket () {
 	const { webidl } = requireWebidl();
 	const { URLSerializer } = requireDataUrl();
 	const { environmentSettingsObject } = requireUtil$6();
-	const { staticPropertyDescriptors, states, sentCloseFrameState, sendHints } = requireConstants();
+	const { staticPropertyDescriptors, states, sentCloseFrameState, sendHints } = requireConstants$1();
 	const {
 	  kWebSocketURL,
 	  kReadyState,
@@ -28269,7 +28269,7 @@ class Summary {
                 throw new Error(`Unable to find environment variable for $${SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
             }
             try {
-                yield access(pathFromEnv, constants$5.R_OK | constants$5.W_OK);
+                yield access(pathFromEnv, constants$6.R_OK | constants$6.W_OK);
             }
             catch (_a) {
                 throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
@@ -28655,6 +28655,95 @@ function runAction(run) {
     run().catch((error) => {
         setFailed(error instanceof Error ? error.message : String(error));
     });
+}
+
+// Shared by every action that writes untrusted values into a job summary
+// table (nf-test, read-config): core.summary.addTable() writes cell data as
+// raw HTML, unescaped.
+/** Escapes text for a job summary table cell. */
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Shared predicate for every setting that must be a positive integer
+// (get-shards' max-shards, read-config's number-kind settings).
+/** Throws unless `value` is a positive integer. `label` names the value in the message. */
+function assertPositiveInteger(value, label) {
+    if (!Number.isInteger(value) || value <= 0) {
+        throw new Error(`${label} must be a positive integer. Got: ${String(value)}`);
+    }
+}
+
+/**
+ * Writes the job summary and never throws. core.summary.write() throws when
+ * GITHUB_STEP_SUMMARY is unset or unwritable, for example a local run or
+ * `act`. Outputs are already published by the time this runs, so a missing
+ * summary is a warning, not a failed action.
+ */
+async function writeSummaryBestEffort() {
+    try {
+        await summary.write();
+    }
+    catch (error) {
+        warning(`Could not write the job summary: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+// Writes this action's half of the 'pr-comment' artifact contract. See
+// post-comment's own artifact.ts (the reader) and README.md for the shared
+// shape: pr_number.txt and header.txt always, comment.md only when there is
+// something to say.
+/** The header every comment this action posts is filed under. See marker.ts in post-comment. */
+const HEADER = 'template-version';
+/**
+ * Writes pr_number.txt and header.txt into `dir`, creating it if needed,
+ * plus comment.md when `comment` is given and resolved.md when `resolved`
+ * is given. Omitting comment.md (rather than writing an empty one) is what
+ * tells post-comment there is nothing to say; omitting resolved.md is what
+ * tells it there is nothing to update a stale comment to, either.
+ */
+function writeArtifact(dir, prNumber, comment, resolved) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'pr_number.txt'), prNumber);
+    writeFileSync(join(dir, 'header.txt'), HEADER);
+    if (comment !== undefined) {
+        writeFileSync(join(dir, 'comment.md'), comment);
+    }
+    if (resolved !== undefined) {
+        writeFileSync(join(dir, 'resolved.md'), resolved);
+    }
+}
+
+// Pure composition of the PR comment body. No I/O here.
+const DOCS_URL = 'https://nf-co.re/docs/developing/template-syncs/overview';
+/**
+ * Builds the comment body for a pipeline behind the latest nf-core/tools
+ * release. Only called when compareVersions() reports 'behind'.
+ *
+ * Kept factual: stage 7's post-comment posts this verbatim (past its own
+ * mention/image/marker neutralisation), so it states the two versions and
+ * links to the one thing a maintainer needs, nothing more.
+ */
+function buildComment(pipelineVersion, latestVersion) {
+    return `> [!WARNING]
+> A newer version of the nf-core template is available.
+>
+> This pipeline uses nf-core/tools version ${pipelineVersion}. The latest release is ${latestVersion}.
+>
+> See the [synchronisation documentation](${DOCS_URL}) for how to update.
+`;
+}
+/**
+ * Builds the resolved.md body that replaces an earlier 'behind' comment
+ * once the pipeline has caught up. Only called when compareVersions()
+ * reports 'up-to-date'.
+ *
+ * States only `latestVersion`, a trusted GitHub release tag, never the
+ * pipeline's own configured version: unlike buildComment(), there is
+ * nothing pull-request-controlled to keep out this way (see run.ts).
+ */
+function buildResolvedComment(latestVersion) {
+    return `This pipeline's nf-core/tools template is up to date with the latest release, ${latestVersion}.\n`;
 }
 
 class Context {
@@ -33905,7 +33994,7 @@ function getOctokitOptions(token, options) {
     return opts;
 }
 
-const context = new Context();
+new Context();
 /**
  * Returns a hydrated octokit ready to use for GitHub Actions
  *
@@ -33917,451 +34006,2948 @@ function getOctokit(token, options, ...additionalPlugins) {
     return new GitHubWithPlugins(getOctokitOptions(token));
 }
 
-// Shared by every action that writes untrusted values into a job summary
-// table (nf-test, read-config): core.summary.addTable() writes cell data as
-// raw HTML, unescaped.
-/** Escapes text for a job summary table cell. */
-function escapeHtml(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
+// Reads nf-core/tools' latest release tag from the GitHub API.
+const OWNER = 'nf-core';
+const REPO = 'tools';
 /**
- * Writes the job summary and never throws. core.summary.write() throws when
- * GITHUB_STEP_SUMMARY is unset or unwritable, for example a local run or
- * `act`. Outputs are already published by the time this runs, so a missing
- * summary is a warning, not a failed action.
+ * Fetches the tag of nf-core/tools' latest published release, for example
+ * '4.1.0'. `token` only raises the request above the unauthenticated rate
+ * limit: nf-core/tools is a public repository, so reading its release list
+ * needs no scope at all, and this never writes anything with it.
  */
-async function writeSummaryBestEffort() {
-    try {
-        await summary.write();
-    }
-    catch (error) {
-        warning(`Could not write the job summary: ${error instanceof Error ? error.message : String(error)}`);
-    }
-}
-
-// Pure classification of a non-regular-file fs.Stats, for the "not a regular
-// file" rejection message. A symlink is the case an uploaded artifact can
-// actually contain (see validate-patch's and post-comment's run.ts), but
-// every other non-regular type is named too, so the message is never a bare
-// "unknown".
-/** Names the type of a non-regular-file stat result, for an error message. */
-function describeType(stat) {
-    if (stat.isSymbolicLink())
-        return 'a symlink';
-    if (stat.isDirectory())
-        return 'a directory';
-    if (stat.isFIFO())
-        return 'a FIFO';
-    if (stat.isSocket())
-        return 'a socket';
-    if (stat.isBlockDevice())
-        return 'a block device';
-    if (stat.isCharacterDevice())
-        return 'a character device';
-    return 'not a regular file';
-}
-
-// Shared by every action that treats a missing file as a normal case, not a
-// crash (read-config's config file, nf-test's TAP file, validate-patch's
-// patch file).
-/**
- * Node's fs errors always carry a string .code, regardless of which realm
- * constructed them. Checking that shape, rather than `instanceof Error`,
- * avoids a cross-realm false negative under Jest's experimental VM modules.
- */
-function isEnoent(error) {
-    return (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'ENOENT');
-}
-
-// Reads the pr-comment artifact contract from disk. No validation of the
-// field contents here (see validate.ts); this only decides what is present,
-// and rejects a file this action must not read: a symlink (followed into
-// whatever it points at) or one too large to load safely.
-// pr_number.txt and header.txt are a short id and a short slug; 4 KiB is
-// generous for either while still capping them. comment.md is a full lint
-// report: capped well above MAX_COMMENT_BODY_LENGTH (body.ts's character
-// count, not a byte count) so a legitimate multi-byte-UTF-8 report still
-// fits, while a wildly oversized file is still rejected before it is read
-// into memory at all.
-const MAX_SMALL_FIELD_BYTES = 4096;
-const MAX_COMMENT_MD_BYTES = 1024 * 1024;
-/**
- * Reads `path` as UTF-8, or undefined if it is absent. Mirrors
- * validate-patch's run.ts: lstat, not stat, so a symlink is judged by what
- * it is instead of being followed into whatever it points at, and a size
- * cap is enforced before the file is read.
- */
-function readOptional(path, maxBytes) {
-    let stat;
-    try {
-        stat = lstatSync(path);
-    }
-    catch (error) {
-        if (isEnoent(error))
-            return undefined;
-        throw error;
-    }
-    if (!stat.isFile()) {
-        throw new Error(`'${path}' is not a regular file (found ${describeType(stat)}). Refusing to read it.`);
-    }
-    if (stat.size > maxBytes) {
-        throw new Error(`'${path}' is ${String(stat.size)} bytes, over the ${String(maxBytes)} byte cap.`);
-    }
-    return readFileSync$1(path, 'utf8');
-}
-/**
- * Reads pr_number.txt, header.txt, comment.md and resolved.md from `dir`.
- *
- * Returns undefined when pr_number.txt itself is absent. This is the
- * normal case, not an error: the whole artifact is missing whenever the
- * producing job never ran on a pull request, or a timeout or cancellation
- * skipped its `if: always()` upload step, and this also covers the
- * directory itself not existing at all.
- *
- * Throws when pr_number.txt is present but header.txt is not: every
- * producer in this repo writes both together in one step, so that
- * combination means the artifact is malformed, not that there is nothing
- * to post.
- */
-function readArtifact(dir) {
-    const prNumberRaw = readOptional(join(dir, 'pr_number.txt'), MAX_SMALL_FIELD_BYTES);
-    if (prNumberRaw === undefined)
-        return undefined;
-    const headerRaw = readOptional(join(dir, 'header.txt'), MAX_SMALL_FIELD_BYTES);
-    if (headerRaw === undefined) {
-        throw new Error(`'${dir}' has pr_number.txt but no header.txt. A producer always writes both together, so this artifact is malformed.`);
-    }
-    return {
-        prNumberRaw,
-        headerRaw,
-        bodyRaw: readOptional(join(dir, 'comment.md'), MAX_COMMENT_MD_BYTES),
-        resolvedRaw: readOptional(join(dir, 'resolved.md'), MAX_COMMENT_MD_BYTES)
-    };
-}
-
-// Pure composition of the final comment body. No I/O here. Neutralising
-// mentions, image embeds and marker lookalikes in rawBody is sanitise.ts's
-// job, done by the caller before this runs; this only prefixes and, when
-// the result is too long, truncates.
-// GitHub rejects an issue/pull-request comment body over 65536 characters.
-// The real check is against the gzipped request payload, but the plain
-// character count is a safe, conservative stand-in: anything within it is
-// always accepted.
-const MAX_COMMENT_BODY_LENGTH = 65536;
-const TRUNCATION_NOTICE = "\n\n> **Note:** truncated. The full report was over GitHub's comment size limit.";
-// Appended to close a fenced code block a truncation cut lands inside (see
-// endsInsideFence below), so the notice above renders as text under the
-// block instead of as a line inside it.
-const FENCE_CLOSE = '\n```';
-const FENCE_LINE = /^```.*$/gm;
-/**
- * True when `text` ends with an unterminated ``` fenced code block: an odd
- * number of lines that open with ``` means the last one never closed.
- *
- * ponytail: only recognises plain ``` fences (the case every producer in
- * this repo emits), not ~~~ fences or a closing fence longer than its
- * opener. Widen this if a producer starts emitting either.
- */
-function endsInsideFence(text) {
-    return (text.match(FENCE_LINE)?.length ?? 0) % 2 === 1;
-}
-const HIGH_SURROGATE_MIN = 0xd800;
-const HIGH_SURROGATE_MAX = 0xdbff;
-/**
- * Trims `text` to at most `limit` UTF-16 code units, never splitting a
- * surrogate pair: a cut that lands between a high and low surrogate would
- * otherwise leave a lone, unpaired one at the end.
- */
-function trimToCodeUnitBoundary(text, limit) {
-    if (limit <= 0)
-        return '';
-    const lastCode = text.charCodeAt(limit - 1);
-    const cutsASurrogatePair = lastCode >= HIGH_SURROGATE_MIN && lastCode <= HIGH_SURROGATE_MAX;
-    return text.slice(0, cutsASurrogatePair ? limit - 1 : limit);
-}
-/**
- * Prefixes `rawBody` with `marker` and caps the result at
- * MAX_COMMENT_BODY_LENGTH. Truncates the body, never the marker: a later
- * run must still be able to find this comment by its marker even when the
- * report itself had to be cut. A cut that lands inside an open ``` fence
- * closes it first, and never splits a surrogate pair.
- */
-function buildCommentBody(marker, rawBody) {
-    const prefix = `${marker}\n`;
-    const budget = MAX_COMMENT_BODY_LENGTH - prefix.length;
-    if (rawBody.length <= budget) {
-        return prefix + rawBody;
-    }
-    const noticeBudget = Math.max(budget - TRUNCATION_NOTICE.length, 0);
-    let truncated = trimToCodeUnitBoundary(rawBody, noticeBudget);
-    if (endsInsideFence(truncated)) {
-        const closeBudget = Math.max(noticeBudget - FENCE_CLOSE.length, 0);
-        truncated = trimToCodeUnitBoundary(truncated, closeBudget) + FENCE_CLOSE;
-    }
-    return prefix + truncated + TRUNCATION_NOTICE;
-}
-
-// The hidden marker that lets a later run find and update the same comment
-// instead of adding a new one. Namespaced so a pipeline's own header value
-// (for example 'lint') can't collide with a different tool's own marker.
-// An HTML comment is not rendered, so it stays invisible in the posted
-// comment.
-const MARKER_PREFIX = '<!-- nf-core-actions:pr-comment:';
-const MARKER_SUFFIX = ' -->';
-// The same shape validateHeader() accepts, so this matches every marker
-// this action could ever build, not just the one the current run uses.
-const HEADER_SHAPE = '[a-z][a-z0-9-]{0,63}';
-/** Builds the hidden marker for a validated `header`. */
-function buildMarker(header) {
-    return `${MARKER_PREFIX}${header}${MARKER_SUFFIX}`;
-}
-/**
- * Matches any text shaped like one of this action's own markers. Neither
- * MARKER_PREFIX nor MARKER_SUFFIX contains a regular-expression special
- * character, so they are safe to splice into a pattern as-is.
- *
- * findExistingCommentId() anchors its search on startsWith(), so a
- * lookalike buried inside an untrusted body is never found in place of the
- * real marker on its own. sanitise.ts uses this pattern too, to strip a
- * lookalike out of the body entirely, so a report cannot carry one at all.
- */
-const MARKER_LOOKALIKE = new RegExp(`${MARKER_PREFIX}${HEADER_SHAPE}${MARKER_SUFFIX}`, 'g');
-
-// Neutralises specific shapes inside the untrusted comment.md body, before
-// body.ts prefixes and truncates it. None of this is a security boundary by
-// itself: the comment always renders under the bot's own account, which a
-// contributor cannot spoof (see README.md). Each shape here has no
-// legitimate use in a lint report and a real cost if left alone.
-// GitHub mention syntax: '@user' or '@org/team'. Matching the shape only,
-// not a real username list, is deliberately loose: a false match just
-// turns ordinary text into inline code, never the reverse.
-const MENTION = /@[\w-]+(?:\/[\w-]+)?/g;
-// Markdown image syntax, and the raw HTML tag GitHub also renders as an
-// image inside a comment body.
-const MARKDOWN_IMAGE = /!\[([^\]]*)\]\(([^)]*)\)/g;
-const HTML_IMG_TAG = /<img\b[^>]*>/gi;
-/** Strips any text shaped like one of this action's own markers out of `body`. */
-function neutraliseMarkerLookalikes(body) {
-    return body.replace(MARKER_LOOKALIKE, (match) => `\`${match}\``);
-}
-/** Renders a '@mention' as inline code, so it cannot ping anyone or trigger a mention-based automation. */
-function neutraliseMentions(body) {
-    return body.replace(MENTION, (match) => `\`${match}\``);
-}
-/**
- * Turns a markdown image embed into a plain link (drops the leading '!'),
- * and escapes a raw '<img>' tag into visible text. Neither renders as an
- * image afterwards. An ordinary '[text](url)' link is untouched.
- */
-function neutraliseImageEmbeds(body) {
-    return body
-        .replace(MARKDOWN_IMAGE, (_match, alt, url) => `[${alt}](${url})`)
-        .replace(HTML_IMG_TAG, (tag) => tag.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
-}
-/** Applies every content neutralisation the untrusted comment.md body needs before it is posted. */
-function sanitiseBody(body) {
-    return neutraliseImageEmbeds(neutraliseMentions(neutraliseMarkerLookalikes(body)));
-}
-
-// Pure validation of the two untrusted, structured artifact fields. No I/O
-// here; artifact.ts owns reading the files, run.ts owns using the result.
-// Lowercase letters, digits and hyphens, starting with a letter, up to 64
-// characters. Matches every header a producer in this repo writes today
-// ('lint'), while staying strict enough that a crafted header cannot spell
-// out another tool's own marker text (see marker.ts) or carry anything a
-// shell or Markdown renderer could interpret specially.
-const HEADER_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
-/**
- * Validates header.txt. Rejects, rather than sanitises, anything outside
- * HEADER_PATTERN: silently rewriting a bad header would let two different
- * inputs collapse onto the same marker.
- */
-function validateHeader(raw) {
-    const header = raw.trim();
-    if (!HEADER_PATTERN.test(header)) {
-        throw new Error(`header.txt must match ${HEADER_PATTERN.source} (lowercase letters, digits and hyphens, starting with a letter, at most 64 characters). Got: ${JSON.stringify(raw)}`);
-    }
-    return header;
-}
-const PR_NUMBER_PATTERN = /^[1-9][0-9]*$/;
-/**
- * Validates pr_number.txt as a plain positive integer with no leading zero,
- * no sign and no surrounding text. This only checks the value is
- * well-formed; run.ts still verifies it against the commit that triggered
- * this workflow before using it.
- */
-function validatePrNumber(raw) {
-    const trimmed = raw.trim();
-    if (!PR_NUMBER_PATTERN.test(trimmed)) {
-        throw new Error(`pr_number.txt must be a positive integer with no leading zero. Got: ${JSON.stringify(raw)}`);
-    }
-    return Number(trimmed);
-}
-
-// What every comment GITHUB_TOKEN itself posts under, whatever repository
-// or installation it belongs to. Used only as the fallback below, for the
-// one case GET /user cannot answer.
-const GITHUB_ACTIONS_BOT_LOGIN = 'github-actions[bot]';
-/**
- * Resolves the login the given token will post comments as, so a run
- * updates its own earlier comment however the calling workflow supplies
- * that token, instead of only ever matching one hardcoded login.
- *
- * GET /user needs a user-to-server token: it answers correctly for a
- * personal access token, but returns 403 for an installation access
- * token, which is what GITHUB_TOKEN and every other GitHub App token are.
- * That 403 is itself the reliable signal: GitHub Actions' own token always
- * posts as the fixed 'github-actions[bot]' login, so the fallback below
- * only ever triggers for the one token family it is correct for.
- */
-async function resolveAuthenticatedLogin(octokit) {
-    try {
-        const { data } = await octokit.rest.users.getAuthenticated();
-        return data.login;
-    }
-    catch (error) {
-        const status = error.status;
-        if (status === 403)
-            return GITHUB_ACTIONS_BOT_LOGIN;
-        throw error;
-    }
-}
-function readInputs() {
-    return {
-        artifactPath: getInput('artifact-path', { required: true }),
-        token: getInput('github-token', { required: true }),
-        headSha: getInput('head-sha', { required: true })
-    };
-}
-/**
- * Resolves which pull request(s) `headSha` belongs to, independent of
- * anything the artifact claims.
- *
- * github.event.workflow_run.pull_requests is not used for this: GitHub
- * leaves it empty whenever the run came from a pull request opened from a
- * fork, which is exactly the untrusted case this check exists for. Asking
- * the API for the commit's own associated pull requests instead works the
- * same way for a fork and for a same-repository branch, because GitHub
- * keys it by the commit itself, not by which repository holds the branch
- * it lives on.
- */
-async function resolveAssociatedPrNumbers(octokit, owner, repo, headSha) {
-    const pulls = await octokit.paginate(octokit.rest.repos.listPullRequestsAssociatedWithCommit, { owner, repo, commit_sha: headSha });
-    return pulls.map((pull) => pull.number);
-}
-/**
- * Finds a comment `selfLogin` itself posted that already starts with
- * `marker`, if any. Anchored on startsWith(), not includes(): buildMarker()
- * always writes the marker at position 0 (see body.ts), so a lookalike an
- * untrusted body buries elsewhere in someone else's comment can never match
- * here, even before sanitise.ts strips one out.
- */
-async function findExistingCommentId(octokit, owner, repo, issueNumber, marker, selfLogin) {
-    const comments = await octokit.paginate(octokit.rest.issues.listComments, {
-        owner,
-        repo,
-        issue_number: issueNumber
+async function fetchLatestToolsVersion(token) {
+    const octokit = getOctokit(token);
+    const { data } = await octokit.rest.repos.getLatestRelease({
+        owner: OWNER,
+        repo: REPO
     });
-    return comments.find((comment) => comment.user?.login === selfLogin && comment.body?.startsWith(marker))?.id;
+    return data.tag_name;
 }
-async function writeOutcomeSummary(header, prNumber, updated) {
-    summary
-        .addHeading('post-comment', 3)
-        .addRaw(`${updated ? 'Updated' : 'Created'} the '${escapeHtml(header)}' comment on pull request #${String(prNumber)}.`, true);
-    await writeSummaryBestEffort();
+
+var re = {exports: {}};
+
+var constants;
+var hasRequiredConstants;
+
+function requireConstants () {
+	if (hasRequiredConstants) return constants;
+	hasRequiredConstants = 1;
+
+	// Note: this is the semver.org version of the spec that it implements
+	// Not necessarily the package version of this code.
+	const SEMVER_SPEC_VERSION = '2.0.0';
+
+	const MAX_LENGTH = 256;
+	const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER ||
+	/* istanbul ignore next */ 9007199254740991;
+
+	// Max safe segment length for coercion.
+	const MAX_SAFE_COMPONENT_LENGTH = 16;
+
+	// Max safe length for a build identifier. The max length minus 6 characters for
+	// the shortest version with a build 0.0.0+BUILD.
+	const MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6;
+
+	const RELEASE_TYPES = [
+	  'major',
+	  'premajor',
+	  'minor',
+	  'preminor',
+	  'patch',
+	  'prepatch',
+	  'prerelease',
+	];
+
+	constants = {
+	  MAX_LENGTH,
+	  MAX_SAFE_COMPONENT_LENGTH,
+	  MAX_SAFE_BUILD_LENGTH,
+	  MAX_SAFE_INTEGER,
+	  RELEASE_TYPES,
+	  SEMVER_SPEC_VERSION,
+	  FLAG_INCLUDE_PRERELEASE: 0b001,
+	  FLAG_LOOSE: 0b010,
+	};
+	return constants;
+}
+
+var debug_1;
+var hasRequiredDebug;
+
+function requireDebug () {
+	if (hasRequiredDebug) return debug_1;
+	hasRequiredDebug = 1;
+
+	const debug = (
+	  typeof process === 'object' &&
+	  process.env &&
+	  process.env.NODE_DEBUG &&
+	  /\bsemver\b/i.test(process.env.NODE_DEBUG)
+	) ? (...args) => console.error('SEMVER', ...args)
+	  : () => {};
+
+	debug_1 = debug;
+	return debug_1;
+}
+
+var hasRequiredRe;
+
+function requireRe () {
+	if (hasRequiredRe) return re.exports;
+	hasRequiredRe = 1;
+	(function (module, exports) {
+
+		const {
+		  MAX_SAFE_COMPONENT_LENGTH,
+		  MAX_SAFE_BUILD_LENGTH,
+		  MAX_LENGTH,
+		} = requireConstants();
+		const debug = requireDebug();
+		exports = module.exports = {};
+
+		// The actual regexps go on exports.re
+		const re = exports.re = [];
+		const safeRe = exports.safeRe = [];
+		const src = exports.src = [];
+		const safeSrc = exports.safeSrc = [];
+		const t = exports.t = {};
+		let R = 0;
+
+		const LETTERDASHNUMBER = '[a-zA-Z0-9-]';
+
+		// Replace some greedy regex tokens to prevent regex dos issues. These regex are
+		// used internally via the safeRe object since all inputs in this library get
+		// normalized first to trim and collapse all extra whitespace. The original
+		// regexes are exported for userland consumption and lower level usage. A
+		// future breaking change could export the safer regex only with a note that
+		// all input should have extra whitespace removed.
+		const safeRegexReplacements = [
+		  ['\\s', 1],
+		  ['\\d', MAX_LENGTH],
+		  [LETTERDASHNUMBER, MAX_SAFE_BUILD_LENGTH],
+		];
+
+		const makeSafeRegex = (value) => {
+		  for (const [token, max] of safeRegexReplacements) {
+		    value = value
+		      .split(`${token}*`).join(`${token}{0,${max}}`)
+		      .split(`${token}+`).join(`${token}{1,${max}}`);
+		  }
+		  return value
+		};
+
+		const createToken = (name, value, isGlobal) => {
+		  const safe = makeSafeRegex(value);
+		  const index = R++;
+		  debug(name, index, value);
+		  t[name] = index;
+		  src[index] = value;
+		  safeSrc[index] = safe;
+		  re[index] = new RegExp(value, isGlobal ? 'g' : undefined);
+		  safeRe[index] = new RegExp(safe, isGlobal ? 'g' : undefined);
+		};
+
+		// The following Regular Expressions can be used for tokenizing,
+		// validating, and parsing SemVer version strings.
+
+		// ## Numeric Identifier
+		// A single `0`, or a non-zero digit followed by zero or more digits.
+
+		createToken('NUMERICIDENTIFIER', '0|[1-9]\\d*');
+		createToken('NUMERICIDENTIFIERLOOSE', '\\d+');
+
+		// ## Non-numeric Identifier
+		// Zero or more digits, followed by a letter or hyphen, and then zero or
+		// more letters, digits, or hyphens.
+
+		createToken('NONNUMERICIDENTIFIER', `\\d*[a-zA-Z-]${LETTERDASHNUMBER}*`);
+
+		// ## Main Version
+		// Three dot-separated numeric identifiers.
+
+		createToken('MAINVERSION', `(${src[t.NUMERICIDENTIFIER]})\\.` +
+		                   `(${src[t.NUMERICIDENTIFIER]})\\.` +
+		                   `(${src[t.NUMERICIDENTIFIER]})`);
+
+		createToken('MAINVERSIONLOOSE', `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.` +
+		                        `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.` +
+		                        `(${src[t.NUMERICIDENTIFIERLOOSE]})`);
+
+		// ## Pre-release Version Identifier
+		// A numeric identifier, or a non-numeric identifier.
+		// Non-numeric identifiers include numeric identifiers but can be longer.
+		// Therefore non-numeric identifiers must go first.
+
+		createToken('PRERELEASEIDENTIFIER', `(?:${src[t.NONNUMERICIDENTIFIER]
+		}|${src[t.NUMERICIDENTIFIER]})`);
+
+		createToken('PRERELEASEIDENTIFIERLOOSE', `(?:${src[t.NONNUMERICIDENTIFIER]
+		}|${src[t.NUMERICIDENTIFIERLOOSE]})`);
+
+		// ## Pre-release Version
+		// Hyphen, followed by one or more dot-separated pre-release version
+		// identifiers.
+
+		createToken('PRERELEASE', `(?:-(${src[t.PRERELEASEIDENTIFIER]
+		}(?:\\.${src[t.PRERELEASEIDENTIFIER]})*))`);
+
+		createToken('PRERELEASELOOSE', `(?:-?(${src[t.PRERELEASEIDENTIFIERLOOSE]
+		}(?:\\.${src[t.PRERELEASEIDENTIFIERLOOSE]})*))`);
+
+		// ## Build Metadata Identifier
+		// Any combination of digits, letters, or hyphens.
+
+		createToken('BUILDIDENTIFIER', `${LETTERDASHNUMBER}+`);
+
+		// ## Build Metadata
+		// Plus sign, followed by one or more period-separated build metadata
+		// identifiers.
+
+		createToken('BUILD', `(?:\\+(${src[t.BUILDIDENTIFIER]
+		}(?:\\.${src[t.BUILDIDENTIFIER]})*))`);
+
+		// ## Full Version String
+		// A main version, followed optionally by a pre-release version and
+		// build metadata.
+
+		// Note that the only major, minor, patch, and pre-release sections of
+		// the version string are capturing groups.  The build metadata is not a
+		// capturing group, because it should not ever be used in version
+		// comparison.
+
+		createToken('FULLPLAIN', `v?${src[t.MAINVERSION]
+		}${src[t.PRERELEASE]}?${
+		  src[t.BUILD]}?`);
+
+		createToken('FULL', `^${src[t.FULLPLAIN]}$`);
+
+		// like full, but allows v1.2.3 and =1.2.3, which people do sometimes.
+		// also, 1.0.0alpha1 (prerelease without the hyphen) which is pretty
+		// common in the npm registry.
+		createToken('LOOSEPLAIN', `[v=\\s]*${src[t.MAINVERSIONLOOSE]
+		}${src[t.PRERELEASELOOSE]}?${
+		  src[t.BUILD]}?`);
+
+		createToken('LOOSE', `^${src[t.LOOSEPLAIN]}$`);
+
+		createToken('GTLT', '((?:<|>)?=?)');
+
+		// Something like "2.*" or "1.2.x".
+		// Note that "x.x" is a valid xRange identifier, meaning "any version"
+		// Only the first item is strictly required.
+		createToken('XRANGEIDENTIFIERLOOSE', `${src[t.NUMERICIDENTIFIERLOOSE]}|x|X|\\*`);
+		createToken('XRANGEIDENTIFIER', `${src[t.NUMERICIDENTIFIER]}|x|X|\\*`);
+
+		createToken('XRANGEPLAIN', `[v=\\s]*(${src[t.XRANGEIDENTIFIER]})` +
+		                   `(?:\\.(${src[t.XRANGEIDENTIFIER]})` +
+		                   `(?:\\.(${src[t.XRANGEIDENTIFIER]})` +
+		                   `(?:${src[t.PRERELEASE]})?${
+		                     src[t.BUILD]}?` +
+		                   `)?)?`);
+
+		createToken('XRANGEPLAINLOOSE', `[v=\\s]*(${src[t.XRANGEIDENTIFIERLOOSE]})` +
+		                        `(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})` +
+		                        `(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})` +
+		                        `(?:${src[t.PRERELEASELOOSE]})?${
+		                          src[t.BUILD]}?` +
+		                        `)?)?`);
+
+		createToken('XRANGE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAIN]}$`);
+		createToken('XRANGELOOSE', `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAINLOOSE]}$`);
+
+		// Coercion.
+		// Extract anything that could conceivably be a part of a valid semver
+		createToken('COERCEPLAIN', `${'(^|[^\\d])' +
+		              '(\\d{1,'}${MAX_SAFE_COMPONENT_LENGTH}})` +
+		              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?` +
+		              `(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?`);
+		createToken('COERCE', `${src[t.COERCEPLAIN]}(?:$|[^\\d])`);
+		createToken('COERCEFULL', src[t.COERCEPLAIN] +
+		              `(?:${src[t.PRERELEASE]})?` +
+		              `(?:${src[t.BUILD]})?` +
+		              `(?:$|[^\\d])`);
+		createToken('COERCERTL', src[t.COERCE], true);
+		createToken('COERCERTLFULL', src[t.COERCEFULL], true);
+
+		// Tilde ranges.
+		// Meaning is "reasonably at or greater than"
+		createToken('LONETILDE', '(?:~>?)');
+
+		createToken('TILDETRIM', `(\\s*)${src[t.LONETILDE]}\\s+`, true);
+		exports.tildeTrimReplace = '$1~';
+
+		createToken('TILDE', `^${src[t.LONETILDE]}${src[t.XRANGEPLAIN]}$`);
+		createToken('TILDELOOSE', `^${src[t.LONETILDE]}${src[t.XRANGEPLAINLOOSE]}$`);
+
+		// Caret ranges.
+		// Meaning is "at least and backwards compatible with"
+		createToken('LONECARET', '(?:\\^)');
+
+		createToken('CARETTRIM', `(\\s*)${src[t.LONECARET]}\\s+`, true);
+		exports.caretTrimReplace = '$1^';
+
+		createToken('CARET', `^${src[t.LONECARET]}${src[t.XRANGEPLAIN]}$`);
+		createToken('CARETLOOSE', `^${src[t.LONECARET]}${src[t.XRANGEPLAINLOOSE]}$`);
+
+		// A simple gt/lt/eq thing, or just "" to indicate "any version"
+		createToken('COMPARATORLOOSE', `^${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]})$|^$`);
+		createToken('COMPARATOR', `^${src[t.GTLT]}\\s*(${src[t.FULLPLAIN]})$|^$`);
+
+		// An expression to strip any whitespace between the gtlt and the thing
+		// it modifies, so that `> 1.2.3` ==> `>1.2.3`
+		createToken('COMPARATORTRIM', `(\\s*)${src[t.GTLT]
+		}\\s*(${src[t.LOOSEPLAIN]}|${src[t.XRANGEPLAIN]})`, true);
+		exports.comparatorTrimReplace = '$1$2$3';
+
+		// Something like `1.2.3 - 1.2.4`
+		// Note that these all use the loose form, because they'll be
+		// checked against either the strict or loose comparator form
+		// later.
+		createToken('HYPHENRANGE', `^\\s*(${src[t.XRANGEPLAIN]})` +
+		                   `\\s+-\\s+` +
+		                   `(${src[t.XRANGEPLAIN]})` +
+		                   `\\s*$`);
+
+		createToken('HYPHENRANGELOOSE', `^\\s*(${src[t.XRANGEPLAINLOOSE]})` +
+		                        `\\s+-\\s+` +
+		                        `(${src[t.XRANGEPLAINLOOSE]})` +
+		                        `\\s*$`);
+
+		// Star ranges basically just allow anything at all.
+		createToken('STAR', '(<|>)?=?\\s*\\*');
+		// >=0.0.0 is like a star
+		createToken('GTE0', '^\\s*>=\\s*0\\.0\\.0\\s*$');
+		createToken('GTE0PRE', '^\\s*>=\\s*0\\.0\\.0-0\\s*$'); 
+	} (re, re.exports));
+	return re.exports;
+}
+
+var parseOptions_1;
+var hasRequiredParseOptions;
+
+function requireParseOptions () {
+	if (hasRequiredParseOptions) return parseOptions_1;
+	hasRequiredParseOptions = 1;
+
+	// parse out just the options we care about
+	const looseOption = Object.freeze({ loose: true });
+	const emptyOpts = Object.freeze({ });
+	const parseOptions = options => {
+	  if (!options) {
+	    return emptyOpts
+	  }
+
+	  if (typeof options !== 'object') {
+	    return looseOption
+	  }
+
+	  return options
+	};
+	parseOptions_1 = parseOptions;
+	return parseOptions_1;
+}
+
+var identifiers;
+var hasRequiredIdentifiers;
+
+function requireIdentifiers () {
+	if (hasRequiredIdentifiers) return identifiers;
+	hasRequiredIdentifiers = 1;
+
+	const numeric = /^[0-9]+$/;
+	const compareIdentifiers = (a, b) => {
+	  if (typeof a === 'number' && typeof b === 'number') {
+	    return a === b ? 0 : a < b ? -1 : 1
+	  }
+
+	  const anum = numeric.test(a);
+	  const bnum = numeric.test(b);
+
+	  if (anum && bnum) {
+	    a = +a;
+	    b = +b;
+	  }
+
+	  return a === b ? 0
+	    : (anum && !bnum) ? -1
+	    : (bnum && !anum) ? 1
+	    : a < b ? -1
+	    : 1
+	};
+
+	const rcompareIdentifiers = (a, b) => compareIdentifiers(b, a);
+
+	identifiers = {
+	  compareIdentifiers,
+	  rcompareIdentifiers,
+	};
+	return identifiers;
+}
+
+var semver$1;
+var hasRequiredSemver$1;
+
+function requireSemver$1 () {
+	if (hasRequiredSemver$1) return semver$1;
+	hasRequiredSemver$1 = 1;
+
+	const debug = requireDebug();
+	const { MAX_LENGTH, MAX_SAFE_INTEGER } = requireConstants();
+	const { safeRe: re, t } = requireRe();
+
+	const parseOptions = requireParseOptions();
+	const { compareIdentifiers } = requireIdentifiers();
+
+	const isPrereleaseIdentifier = (prerelease, identifier) => {
+	  const identifiers = identifier.split('.');
+	  if (identifiers.length > prerelease.length) {
+	    return false
+	  }
+
+	  for (let i = 0; i < identifiers.length; i++) {
+	    if (compareIdentifiers(prerelease[i], identifiers[i]) !== 0) {
+	      return false
+	    }
+	  }
+
+	  return true
+	};
+
+	class SemVer {
+	  constructor (version, options) {
+	    options = parseOptions(options);
+
+	    if (version instanceof SemVer) {
+	      if (version.loose === !!options.loose &&
+	        version.includePrerelease === !!options.includePrerelease) {
+	        return version
+	      } else {
+	        version = version.version;
+	      }
+	    } else if (typeof version !== 'string') {
+	      throw new TypeError(`Invalid version. Must be a string. Got type "${typeof version}".`)
+	    }
+
+	    if (version.length > MAX_LENGTH) {
+	      throw new TypeError(
+	        `version is longer than ${MAX_LENGTH} characters`
+	      )
+	    }
+
+	    debug('SemVer', version, options);
+	    this.options = options;
+	    this.loose = !!options.loose;
+	    // this isn't actually relevant for versions, but keep it so that we
+	    // don't run into trouble passing this.options around.
+	    this.includePrerelease = !!options.includePrerelease;
+
+	    const m = version.trim().match(options.loose ? re[t.LOOSE] : re[t.FULL]);
+
+	    if (!m) {
+	      throw new TypeError(`Invalid Version: ${version}`)
+	    }
+
+	    this.raw = version;
+
+	    // these are actually numbers
+	    this.major = +m[1];
+	    this.minor = +m[2];
+	    this.patch = +m[3];
+
+	    if (this.major > MAX_SAFE_INTEGER || this.major < 0) {
+	      throw new TypeError('Invalid major version')
+	    }
+
+	    if (this.minor > MAX_SAFE_INTEGER || this.minor < 0) {
+	      throw new TypeError('Invalid minor version')
+	    }
+
+	    if (this.patch > MAX_SAFE_INTEGER || this.patch < 0) {
+	      throw new TypeError('Invalid patch version')
+	    }
+
+	    // numberify any prerelease numeric ids
+	    if (!m[4]) {
+	      this.prerelease = [];
+	    } else {
+	      this.prerelease = m[4].split('.').map((id) => {
+	        if (/^[0-9]+$/.test(id)) {
+	          const num = +id;
+	          if (num >= 0 && num < MAX_SAFE_INTEGER) {
+	            return num
+	          }
+	        }
+	        return id
+	      });
+	    }
+
+	    this.build = m[5] ? m[5].split('.') : [];
+	    this.format();
+	  }
+
+	  format () {
+	    this.version = `${this.major}.${this.minor}.${this.patch}`;
+	    if (this.prerelease.length) {
+	      this.version += `-${this.prerelease.join('.')}`;
+	    }
+	    return this.version
+	  }
+
+	  toString () {
+	    return this.version
+	  }
+
+	  compare (other) {
+	    debug('SemVer.compare', this.version, this.options, other);
+	    if (!(other instanceof SemVer)) {
+	      if (typeof other === 'string' && other === this.version) {
+	        return 0
+	      }
+	      other = new SemVer(other, this.options);
+	    }
+
+	    if (other.version === this.version) {
+	      return 0
+	    }
+
+	    return this.compareMain(other) || this.comparePre(other)
+	  }
+
+	  compareMain (other) {
+	    if (!(other instanceof SemVer)) {
+	      other = new SemVer(other, this.options);
+	    }
+
+	    if (this.major < other.major) {
+	      return -1
+	    }
+	    if (this.major > other.major) {
+	      return 1
+	    }
+	    if (this.minor < other.minor) {
+	      return -1
+	    }
+	    if (this.minor > other.minor) {
+	      return 1
+	    }
+	    if (this.patch < other.patch) {
+	      return -1
+	    }
+	    if (this.patch > other.patch) {
+	      return 1
+	    }
+	    return 0
+	  }
+
+	  comparePre (other) {
+	    if (!(other instanceof SemVer)) {
+	      other = new SemVer(other, this.options);
+	    }
+
+	    // NOT having a prerelease is > having one
+	    if (this.prerelease.length && !other.prerelease.length) {
+	      return -1
+	    } else if (!this.prerelease.length && other.prerelease.length) {
+	      return 1
+	    } else if (!this.prerelease.length && !other.prerelease.length) {
+	      return 0
+	    }
+
+	    let i = 0;
+	    do {
+	      const a = this.prerelease[i];
+	      const b = other.prerelease[i];
+	      debug('prerelease compare', i, a, b);
+	      if (a === undefined && b === undefined) {
+	        return 0
+	      } else if (b === undefined) {
+	        return 1
+	      } else if (a === undefined) {
+	        return -1
+	      } else if (a === b) {
+	        continue
+	      } else {
+	        return compareIdentifiers(a, b)
+	      }
+	    } while (++i)
+	  }
+
+	  compareBuild (other) {
+	    if (!(other instanceof SemVer)) {
+	      other = new SemVer(other, this.options);
+	    }
+
+	    let i = 0;
+	    do {
+	      const a = this.build[i];
+	      const b = other.build[i];
+	      debug('build compare', i, a, b);
+	      if (a === undefined && b === undefined) {
+	        return 0
+	      } else if (b === undefined) {
+	        return 1
+	      } else if (a === undefined) {
+	        return -1
+	      } else if (a === b) {
+	        continue
+	      } else {
+	        return compareIdentifiers(a, b)
+	      }
+	    } while (++i)
+	  }
+
+	  // preminor will bump the version up to the next minor release, and immediately
+	  // down to pre-release. premajor and prepatch work the same way.
+	  inc (release, identifier, identifierBase) {
+	    if (release.startsWith('pre')) {
+	      if (!identifier && identifierBase === false) {
+	        throw new Error('invalid increment argument: identifier is empty')
+	      }
+	      // Avoid an invalid semver results
+	      if (identifier) {
+	        const match = `-${identifier}`.match(this.options.loose ? re[t.PRERELEASELOOSE] : re[t.PRERELEASE]);
+	        if (!match || match[1] !== identifier) {
+	          throw new Error(`invalid identifier: ${identifier}`)
+	        }
+	      }
+	    }
+
+	    switch (release) {
+	      case 'premajor':
+	        this.prerelease.length = 0;
+	        this.patch = 0;
+	        this.minor = 0;
+	        this.major++;
+	        this.inc('pre', identifier, identifierBase);
+	        break
+	      case 'preminor':
+	        this.prerelease.length = 0;
+	        this.patch = 0;
+	        this.minor++;
+	        this.inc('pre', identifier, identifierBase);
+	        break
+	      case 'prepatch':
+	        // If this is already a prerelease, it will bump to the next version
+	        // drop any prereleases that might already exist, since they are not
+	        // relevant at this point.
+	        this.prerelease.length = 0;
+	        this.inc('patch', identifier, identifierBase);
+	        this.inc('pre', identifier, identifierBase);
+	        break
+	      // If the input is a non-prerelease version, this acts the same as
+	      // prepatch.
+	      case 'prerelease':
+	        if (this.prerelease.length === 0) {
+	          this.inc('patch', identifier, identifierBase);
+	        }
+	        this.inc('pre', identifier, identifierBase);
+	        break
+	      case 'release':
+	        if (this.prerelease.length === 0) {
+	          throw new Error(`version ${this.raw} is not a prerelease`)
+	        }
+	        this.prerelease.length = 0;
+	        break
+
+	      case 'major':
+	        // If this is a pre-major version, bump up to the same major version.
+	        // Otherwise increment major.
+	        // 1.0.0-5 bumps to 1.0.0
+	        // 1.1.0 bumps to 2.0.0
+	        if (
+	          this.minor !== 0 ||
+	          this.patch !== 0 ||
+	          this.prerelease.length === 0
+	        ) {
+	          this.major++;
+	        }
+	        this.minor = 0;
+	        this.patch = 0;
+	        this.prerelease = [];
+	        break
+	      case 'minor':
+	        // If this is a pre-minor version, bump up to the same minor version.
+	        // Otherwise increment minor.
+	        // 1.2.0-5 bumps to 1.2.0
+	        // 1.2.1 bumps to 1.3.0
+	        if (this.patch !== 0 || this.prerelease.length === 0) {
+	          this.minor++;
+	        }
+	        this.patch = 0;
+	        this.prerelease = [];
+	        break
+	      case 'patch':
+	        // If this is not a pre-release version, it will increment the patch.
+	        // If it is a pre-release it will bump up to the same patch version.
+	        // 1.2.0-5 patches to 1.2.0
+	        // 1.2.0 patches to 1.2.1
+	        if (this.prerelease.length === 0) {
+	          this.patch++;
+	        }
+	        this.prerelease = [];
+	        break
+	      // This probably shouldn't be used publicly.
+	      // 1.0.0 'pre' would become 1.0.0-0 which is the wrong direction.
+	      case 'pre': {
+	        const base = Number(identifierBase) ? 1 : 0;
+
+	        if (this.prerelease.length === 0) {
+	          this.prerelease = [base];
+	        } else {
+	          let i = this.prerelease.length;
+	          while (--i >= 0) {
+	            if (typeof this.prerelease[i] === 'number') {
+	              this.prerelease[i]++;
+	              i = -2;
+	            }
+	          }
+	          if (i === -1) {
+	            // didn't increment anything
+	            if (identifier === this.prerelease.join('.') && identifierBase === false) {
+	              throw new Error('invalid increment argument: identifier already exists')
+	            }
+	            this.prerelease.push(base);
+	          }
+	        }
+	        if (identifier) {
+	          // 1.2.0-beta.1 bumps to 1.2.0-beta.2,
+	          // 1.2.0-beta.fooblz or 1.2.0-beta bumps to 1.2.0-beta.0
+	          let prerelease = [identifier, base];
+	          if (identifierBase === false) {
+	            prerelease = [identifier];
+	          }
+	          if (isPrereleaseIdentifier(this.prerelease, identifier)) {
+	            const prereleaseBase = this.prerelease[identifier.split('.').length];
+	            if (isNaN(prereleaseBase)) {
+	              this.prerelease = prerelease;
+	            }
+	          } else {
+	            this.prerelease = prerelease;
+	          }
+	        }
+	        break
+	      }
+	      default:
+	        throw new Error(`invalid increment argument: ${release}`)
+	    }
+	    this.raw = this.format();
+	    if (this.build.length) {
+	      this.raw += `+${this.build.join('.')}`;
+	    }
+	    return this
+	  }
+	}
+
+	semver$1 = SemVer;
+	return semver$1;
+}
+
+var parse_1;
+var hasRequiredParse;
+
+function requireParse () {
+	if (hasRequiredParse) return parse_1;
+	hasRequiredParse = 1;
+
+	const SemVer = requireSemver$1();
+	const parse = (version, options, throwErrors = false) => {
+	  if (version instanceof SemVer) {
+	    return version
+	  }
+	  try {
+	    return new SemVer(version, options)
+	  } catch (er) {
+	    if (!throwErrors) {
+	      return null
+	    }
+	    throw er
+	  }
+	};
+
+	parse_1 = parse;
+	return parse_1;
+}
+
+var valid_1;
+var hasRequiredValid$1;
+
+function requireValid$1 () {
+	if (hasRequiredValid$1) return valid_1;
+	hasRequiredValid$1 = 1;
+
+	const parse = requireParse();
+	const valid = (version, options) => {
+	  const v = parse(version, options);
+	  return v ? v.version : null
+	};
+	valid_1 = valid;
+	return valid_1;
+}
+
+var clean_1;
+var hasRequiredClean;
+
+function requireClean () {
+	if (hasRequiredClean) return clean_1;
+	hasRequiredClean = 1;
+
+	const parse = requireParse();
+	const clean = (version, options) => {
+	  const s = parse(version.trim().replace(/^[=v]+/, ''), options);
+	  return s ? s.version : null
+	};
+	clean_1 = clean;
+	return clean_1;
+}
+
+var inc_1;
+var hasRequiredInc;
+
+function requireInc () {
+	if (hasRequiredInc) return inc_1;
+	hasRequiredInc = 1;
+
+	const SemVer = requireSemver$1();
+
+	const inc = (version, release, options, identifier, identifierBase) => {
+	  if (typeof (options) === 'string') {
+	    identifierBase = identifier;
+	    identifier = options;
+	    options = undefined;
+	  }
+
+	  try {
+	    return new SemVer(
+	      version instanceof SemVer ? version.version : version,
+	      options
+	    ).inc(release, identifier, identifierBase).version
+	  } catch (er) {
+	    return null
+	  }
+	};
+	inc_1 = inc;
+	return inc_1;
+}
+
+var diff_1;
+var hasRequiredDiff;
+
+function requireDiff () {
+	if (hasRequiredDiff) return diff_1;
+	hasRequiredDiff = 1;
+
+	const parse = requireParse();
+
+	const diff = (version1, version2) => {
+	  const v1 = parse(version1, null, true);
+	  const v2 = parse(version2, null, true);
+	  const comparison = v1.compare(v2);
+
+	  if (comparison === 0) {
+	    return null
+	  }
+
+	  const v1Higher = comparison > 0;
+	  const highVersion = v1Higher ? v1 : v2;
+	  const lowVersion = v1Higher ? v2 : v1;
+	  const highHasPre = !!highVersion.prerelease.length;
+	  const lowHasPre = !!lowVersion.prerelease.length;
+
+	  if (lowHasPre && !highHasPre) {
+	    // Going from prerelease -> no prerelease requires some special casing
+
+	    // If the low version has only a major, then it will always be a major
+	    // Some examples:
+	    // 1.0.0-1 -> 1.0.0
+	    // 1.0.0-1 -> 1.1.1
+	    // 1.0.0-1 -> 2.0.0
+	    if (!lowVersion.patch && !lowVersion.minor) {
+	      return 'major'
+	    }
+
+	    // If the main part has no difference
+	    if (lowVersion.compareMain(highVersion) === 0) {
+	      if (lowVersion.minor && !lowVersion.patch) {
+	        return 'minor'
+	      }
+	      return 'patch'
+	    }
+	  }
+
+	  // add the `pre` prefix if we are going to a prerelease version
+	  const prefix = highHasPre ? 'pre' : '';
+
+	  if (v1.major !== v2.major) {
+	    return prefix + 'major'
+	  }
+
+	  if (v1.minor !== v2.minor) {
+	    return prefix + 'minor'
+	  }
+
+	  if (v1.patch !== v2.patch) {
+	    return prefix + 'patch'
+	  }
+
+	  // high and low are prereleases
+	  return 'prerelease'
+	};
+
+	diff_1 = diff;
+	return diff_1;
+}
+
+var major_1;
+var hasRequiredMajor;
+
+function requireMajor () {
+	if (hasRequiredMajor) return major_1;
+	hasRequiredMajor = 1;
+
+	const SemVer = requireSemver$1();
+	const major = (a, loose) => new SemVer(a, loose).major;
+	major_1 = major;
+	return major_1;
+}
+
+var minor_1;
+var hasRequiredMinor;
+
+function requireMinor () {
+	if (hasRequiredMinor) return minor_1;
+	hasRequiredMinor = 1;
+
+	const SemVer = requireSemver$1();
+	const minor = (a, loose) => new SemVer(a, loose).minor;
+	minor_1 = minor;
+	return minor_1;
+}
+
+var patch_1;
+var hasRequiredPatch;
+
+function requirePatch () {
+	if (hasRequiredPatch) return patch_1;
+	hasRequiredPatch = 1;
+
+	const SemVer = requireSemver$1();
+	const patch = (a, loose) => new SemVer(a, loose).patch;
+	patch_1 = patch;
+	return patch_1;
+}
+
+var prerelease_1;
+var hasRequiredPrerelease;
+
+function requirePrerelease () {
+	if (hasRequiredPrerelease) return prerelease_1;
+	hasRequiredPrerelease = 1;
+
+	const parse = requireParse();
+	const prerelease = (version, options) => {
+	  const parsed = parse(version, options);
+	  return (parsed && parsed.prerelease.length) ? parsed.prerelease : null
+	};
+	prerelease_1 = prerelease;
+	return prerelease_1;
+}
+
+var compare_1;
+var hasRequiredCompare;
+
+function requireCompare () {
+	if (hasRequiredCompare) return compare_1;
+	hasRequiredCompare = 1;
+
+	const SemVer = requireSemver$1();
+	const compare = (a, b, loose) =>
+	  new SemVer(a, loose).compare(new SemVer(b, loose));
+
+	compare_1 = compare;
+	return compare_1;
+}
+
+var rcompare_1;
+var hasRequiredRcompare;
+
+function requireRcompare () {
+	if (hasRequiredRcompare) return rcompare_1;
+	hasRequiredRcompare = 1;
+
+	const compare = requireCompare();
+	const rcompare = (a, b, loose) => compare(b, a, loose);
+	rcompare_1 = rcompare;
+	return rcompare_1;
+}
+
+var compareLoose_1;
+var hasRequiredCompareLoose;
+
+function requireCompareLoose () {
+	if (hasRequiredCompareLoose) return compareLoose_1;
+	hasRequiredCompareLoose = 1;
+
+	const compare = requireCompare();
+	const compareLoose = (a, b) => compare(a, b, true);
+	compareLoose_1 = compareLoose;
+	return compareLoose_1;
+}
+
+var compareBuild_1;
+var hasRequiredCompareBuild;
+
+function requireCompareBuild () {
+	if (hasRequiredCompareBuild) return compareBuild_1;
+	hasRequiredCompareBuild = 1;
+
+	const SemVer = requireSemver$1();
+	const compareBuild = (a, b, loose) => {
+	  const versionA = new SemVer(a, loose);
+	  const versionB = new SemVer(b, loose);
+	  return versionA.compare(versionB) || versionA.compareBuild(versionB)
+	};
+	compareBuild_1 = compareBuild;
+	return compareBuild_1;
+}
+
+var sort_1;
+var hasRequiredSort;
+
+function requireSort () {
+	if (hasRequiredSort) return sort_1;
+	hasRequiredSort = 1;
+
+	const compareBuild = requireCompareBuild();
+	const sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
+	sort_1 = sort;
+	return sort_1;
+}
+
+var rsort_1;
+var hasRequiredRsort;
+
+function requireRsort () {
+	if (hasRequiredRsort) return rsort_1;
+	hasRequiredRsort = 1;
+
+	const compareBuild = requireCompareBuild();
+	const rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
+	rsort_1 = rsort;
+	return rsort_1;
+}
+
+var gt_1;
+var hasRequiredGt;
+
+function requireGt () {
+	if (hasRequiredGt) return gt_1;
+	hasRequiredGt = 1;
+
+	const compare = requireCompare();
+	const gt = (a, b, loose) => compare(a, b, loose) > 0;
+	gt_1 = gt;
+	return gt_1;
+}
+
+var lt_1;
+var hasRequiredLt;
+
+function requireLt () {
+	if (hasRequiredLt) return lt_1;
+	hasRequiredLt = 1;
+
+	const compare = requireCompare();
+	const lt = (a, b, loose) => compare(a, b, loose) < 0;
+	lt_1 = lt;
+	return lt_1;
+}
+
+var eq_1;
+var hasRequiredEq;
+
+function requireEq () {
+	if (hasRequiredEq) return eq_1;
+	hasRequiredEq = 1;
+
+	const compare = requireCompare();
+	const eq = (a, b, loose) => compare(a, b, loose) === 0;
+	eq_1 = eq;
+	return eq_1;
+}
+
+var neq_1;
+var hasRequiredNeq;
+
+function requireNeq () {
+	if (hasRequiredNeq) return neq_1;
+	hasRequiredNeq = 1;
+
+	const compare = requireCompare();
+	const neq = (a, b, loose) => compare(a, b, loose) !== 0;
+	neq_1 = neq;
+	return neq_1;
+}
+
+var gte_1;
+var hasRequiredGte;
+
+function requireGte () {
+	if (hasRequiredGte) return gte_1;
+	hasRequiredGte = 1;
+
+	const compare = requireCompare();
+	const gte = (a, b, loose) => compare(a, b, loose) >= 0;
+	gte_1 = gte;
+	return gte_1;
+}
+
+var lte_1;
+var hasRequiredLte;
+
+function requireLte () {
+	if (hasRequiredLte) return lte_1;
+	hasRequiredLte = 1;
+
+	const compare = requireCompare();
+	const lte = (a, b, loose) => compare(a, b, loose) <= 0;
+	lte_1 = lte;
+	return lte_1;
+}
+
+var cmp_1;
+var hasRequiredCmp;
+
+function requireCmp () {
+	if (hasRequiredCmp) return cmp_1;
+	hasRequiredCmp = 1;
+
+	const eq = requireEq();
+	const neq = requireNeq();
+	const gt = requireGt();
+	const gte = requireGte();
+	const lt = requireLt();
+	const lte = requireLte();
+
+	const cmp = (a, op, b, loose) => {
+	  switch (op) {
+	    case '===':
+	      if (typeof a === 'object') {
+	        a = a.version;
+	      }
+	      if (typeof b === 'object') {
+	        b = b.version;
+	      }
+	      return a === b
+
+	    case '!==':
+	      if (typeof a === 'object') {
+	        a = a.version;
+	      }
+	      if (typeof b === 'object') {
+	        b = b.version;
+	      }
+	      return a !== b
+
+	    case '':
+	    case '=':
+	    case '==':
+	      return eq(a, b, loose)
+
+	    case '!=':
+	      return neq(a, b, loose)
+
+	    case '>':
+	      return gt(a, b, loose)
+
+	    case '>=':
+	      return gte(a, b, loose)
+
+	    case '<':
+	      return lt(a, b, loose)
+
+	    case '<=':
+	      return lte(a, b, loose)
+
+	    default:
+	      throw new TypeError(`Invalid operator: ${op}`)
+	  }
+	};
+	cmp_1 = cmp;
+	return cmp_1;
+}
+
+var coerce_1;
+var hasRequiredCoerce;
+
+function requireCoerce () {
+	if (hasRequiredCoerce) return coerce_1;
+	hasRequiredCoerce = 1;
+
+	const SemVer = requireSemver$1();
+	const parse = requireParse();
+	const { safeRe: re, t } = requireRe();
+
+	const coerce = (version, options) => {
+	  if (version instanceof SemVer) {
+	    return version
+	  }
+
+	  if (typeof version === 'number') {
+	    version = String(version);
+	  }
+
+	  if (typeof version !== 'string') {
+	    return null
+	  }
+
+	  options = options || {};
+
+	  let match = null;
+	  if (!options.rtl) {
+	    match = version.match(options.includePrerelease ? re[t.COERCEFULL] : re[t.COERCE]);
+	  } else {
+	    // Find the right-most coercible string that does not share
+	    // a terminus with a more left-ward coercible string.
+	    // Eg, '1.2.3.4' wants to coerce '2.3.4', not '3.4' or '4'
+	    // With includePrerelease option set, '1.2.3.4-rc' wants to coerce '2.3.4-rc', not '2.3.4'
+	    //
+	    // Walk through the string checking with a /g regexp
+	    // Manually set the index so as to pick up overlapping matches.
+	    // Stop when we get a match that ends at the string end, since no
+	    // coercible string can be more right-ward without the same terminus.
+	    const coerceRtlRegex = options.includePrerelease ? re[t.COERCERTLFULL] : re[t.COERCERTL];
+	    let next;
+	    while ((next = coerceRtlRegex.exec(version)) &&
+	        (!match || match.index + match[0].length !== version.length)
+	    ) {
+	      if (!match ||
+	            next.index + next[0].length !== match.index + match[0].length) {
+	        match = next;
+	      }
+	      coerceRtlRegex.lastIndex = next.index + next[1].length + next[2].length;
+	    }
+	    // leave it in a clean state
+	    coerceRtlRegex.lastIndex = -1;
+	  }
+
+	  if (match === null) {
+	    return null
+	  }
+
+	  const major = match[2];
+	  const minor = match[3] || '0';
+	  const patch = match[4] || '0';
+	  const prerelease = options.includePrerelease && match[5] ? `-${match[5]}` : '';
+	  const build = options.includePrerelease && match[6] ? `+${match[6]}` : '';
+
+	  return parse(`${major}.${minor}.${patch}${prerelease}${build}`, options)
+	};
+	coerce_1 = coerce;
+	return coerce_1;
+}
+
+var truncate_1;
+var hasRequiredTruncate;
+
+function requireTruncate () {
+	if (hasRequiredTruncate) return truncate_1;
+	hasRequiredTruncate = 1;
+
+	const parse = requireParse();
+	const constants = requireConstants();
+	const SemVer = requireSemver$1();
+
+	const truncate = (version, truncation, options) => {
+	  if (!constants.RELEASE_TYPES.includes(truncation)) {
+	    return null
+	  }
+
+	  const clonedVersion = cloneInputVersion(version, options);
+	  return clonedVersion && doTruncation(clonedVersion, truncation)
+	};
+
+	const cloneInputVersion = (version, options) => {
+	  const versionStringToParse = (
+	    version instanceof SemVer ? version.version : version
+	  );
+
+	  return parse(versionStringToParse, options)
+	};
+
+	const doTruncation = (version, truncation) => {
+	  if (isPrerelease(truncation)) {
+	    return version.version
+	  }
+
+	  version.prerelease = [];
+
+	  switch (truncation) {
+	    case 'major':
+	      version.minor = 0;
+	      version.patch = 0;
+	      break
+	    case 'minor':
+	      version.patch = 0;
+	      break
+	  }
+
+	  return version.format()
+	};
+
+	const isPrerelease = (type) => {
+	  return type.startsWith('pre')
+	};
+
+	truncate_1 = truncate;
+	return truncate_1;
+}
+
+var lrucache;
+var hasRequiredLrucache;
+
+function requireLrucache () {
+	if (hasRequiredLrucache) return lrucache;
+	hasRequiredLrucache = 1;
+
+	class LRUCache {
+	  constructor () {
+	    this.max = 1000;
+	    this.map = new Map();
+	  }
+
+	  get (key) {
+	    const value = this.map.get(key);
+	    if (value === undefined) {
+	      return undefined
+	    } else {
+	      // Remove the key from the map and add it to the end
+	      this.map.delete(key);
+	      this.map.set(key, value);
+	      return value
+	    }
+	  }
+
+	  delete (key) {
+	    return this.map.delete(key)
+	  }
+
+	  set (key, value) {
+	    const deleted = this.delete(key);
+
+	    if (!deleted && value !== undefined) {
+	      // If cache is full, delete the least recently used item
+	      if (this.map.size >= this.max) {
+	        const firstKey = this.map.keys().next().value;
+	        this.delete(firstKey);
+	      }
+
+	      this.map.set(key, value);
+	    }
+
+	    return this
+	  }
+	}
+
+	lrucache = LRUCache;
+	return lrucache;
+}
+
+var range;
+var hasRequiredRange;
+
+function requireRange () {
+	if (hasRequiredRange) return range;
+	hasRequiredRange = 1;
+
+	const SPACE_CHARACTERS = /\s+/g;
+
+	// hoisted class for cyclic dependency
+	class Range {
+	  constructor (range, options) {
+	    options = parseOptions(options);
+
+	    if (range instanceof Range) {
+	      if (
+	        range.loose === !!options.loose &&
+	        range.includePrerelease === !!options.includePrerelease
+	      ) {
+	        return range
+	      } else {
+	        return new Range(range.raw, options)
+	      }
+	    }
+
+	    if (range instanceof Comparator) {
+	      // just put it in the set and return
+	      this.raw = range.value;
+	      this.set = [[range]];
+	      this.formatted = undefined;
+	      return this
+	    }
+
+	    this.options = options;
+	    this.loose = !!options.loose;
+	    this.includePrerelease = !!options.includePrerelease;
+
+	    // First reduce all whitespace as much as possible so we do not have to rely
+	    // on potentially slow regexes like \s*. This is then stored and used for
+	    // future error messages as well.
+	    this.raw = range.trim().replace(SPACE_CHARACTERS, ' ');
+
+	    // First, split on ||
+	    this.set = this.raw
+	      .split('||')
+	      // map the range to a 2d array of comparators
+	      .map(r => this.parseRange(r.trim()))
+	      // throw out any comparator lists that are empty
+	      // this generally means that it was not a valid range, which is allowed
+	      // in loose mode, but will still throw if the WHOLE range is invalid.
+	      .filter(c => c.length);
+
+	    if (!this.set.length) {
+	      throw new TypeError(`Invalid SemVer Range: ${this.raw}`)
+	    }
+
+	    // if we have any that are not the null set, throw out null sets.
+	    if (this.set.length > 1) {
+	      // keep the first one, in case they're all null sets
+	      const first = this.set[0];
+	      this.set = this.set.filter(c => !isNullSet(c[0]));
+	      if (this.set.length === 0) {
+	        this.set = [first];
+	      } else if (this.set.length > 1) {
+	        // if we have any that are *, then the range is just *
+	        for (const c of this.set) {
+	          if (c.length === 1 && isAny(c[0])) {
+	            this.set = [c];
+	            break
+	          }
+	        }
+	      }
+	    }
+
+	    this.formatted = undefined;
+	  }
+
+	  get range () {
+	    if (this.formatted === undefined) {
+	      this.formatted = '';
+	      for (let i = 0; i < this.set.length; i++) {
+	        if (i > 0) {
+	          this.formatted += '||';
+	        }
+	        const comps = this.set[i];
+	        for (let k = 0; k < comps.length; k++) {
+	          if (k > 0) {
+	            this.formatted += ' ';
+	          }
+	          this.formatted += comps[k].toString().trim();
+	        }
+	      }
+	    }
+	    return this.formatted
+	  }
+
+	  format () {
+	    return this.range
+	  }
+
+	  toString () {
+	    return this.range
+	  }
+
+	  parseRange (range) {
+	    // strip build metadata so it can't bleed into the version
+	    range = range.replace(BUILDSTRIPRE, '');
+
+	    // memoize range parsing for performance.
+	    // this is a very hot path, and fully deterministic.
+	    const memoOpts =
+	      (this.options.includePrerelease && FLAG_INCLUDE_PRERELEASE) |
+	      (this.options.loose && FLAG_LOOSE);
+	    const memoKey = memoOpts + ':' + range;
+	    const cached = cache.get(memoKey);
+	    if (cached) {
+	      return cached
+	    }
+
+	    const loose = this.options.loose;
+	    // `1.2.3 - 1.2.4` => `>=1.2.3 <=1.2.4`
+	    const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
+	    range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
+	    debug('hyphen replace', range);
+
+	    // `> 1.2.3 < 1.2.5` => `>1.2.3 <1.2.5`
+	    range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
+	    debug('comparator trim', range);
+
+	    // `~ 1.2.3` => `~1.2.3`
+	    range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
+	    debug('tilde trim', range);
+
+	    // `^ 1.2.3` => `^1.2.3`
+	    range = range.replace(re[t.CARETTRIM], caretTrimReplace);
+	    debug('caret trim', range);
+
+	    // At this point, the range is completely trimmed and
+	    // ready to be split into comparators.
+
+	    let rangeList = range
+	      .split(' ')
+	      .map(comp => parseComparator(comp, this.options))
+	      .join(' ')
+	      .split(/\s+/)
+	      // >=0.0.0 is equivalent to *
+	      .map(comp => replaceGTE0(comp, this.options));
+
+	    if (loose) {
+	      // in loose mode, throw out any that are not valid comparators
+	      rangeList = rangeList.filter(comp => {
+	        debug('loose invalid filter', comp, this.options);
+	        return !!comp.match(re[t.COMPARATORLOOSE])
+	      });
+	    }
+	    debug('range list', rangeList);
+
+	    // if any comparators are the null set, then replace with JUST null set
+	    // if more than one comparator, remove any * comparators
+	    // also, don't include the same comparator more than once
+	    const rangeMap = new Map();
+	    const comparators = rangeList.map(comp => new Comparator(comp, this.options));
+	    for (const comp of comparators) {
+	      if (isNullSet(comp)) {
+	        return [comp]
+	      }
+	      rangeMap.set(comp.value, comp);
+	    }
+	    if (rangeMap.size > 1 && rangeMap.has('')) {
+	      rangeMap.delete('');
+	    }
+
+	    const result = [...rangeMap.values()];
+	    cache.set(memoKey, result);
+	    return result
+	  }
+
+	  intersects (range, options) {
+	    if (!(range instanceof Range)) {
+	      throw new TypeError('a Range is required')
+	    }
+
+	    return this.set.some((thisComparators) => {
+	      return (
+	        isSatisfiable(thisComparators, options) &&
+	        range.set.some((rangeComparators) => {
+	          return (
+	            isSatisfiable(rangeComparators, options) &&
+	            thisComparators.every((thisComparator) => {
+	              return rangeComparators.every((rangeComparator) => {
+	                return thisComparator.intersects(rangeComparator, options)
+	              })
+	            })
+	          )
+	        })
+	      )
+	    })
+	  }
+
+	  // if ANY of the sets match ALL of its comparators, then pass
+	  test (version) {
+	    if (!version) {
+	      return false
+	    }
+
+	    if (typeof version === 'string') {
+	      try {
+	        version = new SemVer(version, this.options);
+	      } catch (er) {
+	        return false
+	      }
+	    }
+
+	    for (let i = 0; i < this.set.length; i++) {
+	      if (testSet(this.set[i], version, this.options)) {
+	        return true
+	      }
+	    }
+	    return false
+	  }
+	}
+
+	range = Range;
+
+	const LRU = requireLrucache();
+	const cache = new LRU();
+
+	const parseOptions = requireParseOptions();
+	const Comparator = requireComparator();
+	const debug = requireDebug();
+	const SemVer = requireSemver$1();
+	const {
+	  safeRe: re,
+	  src,
+	  t,
+	  comparatorTrimReplace,
+	  tildeTrimReplace,
+	  caretTrimReplace,
+	} = requireRe();
+	const { FLAG_INCLUDE_PRERELEASE, FLAG_LOOSE } = requireConstants();
+
+	// unbounded global build-metadata stripper used by parseRange
+	const BUILDSTRIPRE = new RegExp(src[t.BUILD], 'g');
+
+	const isNullSet = c => c.value === '<0.0.0-0';
+	const isAny = c => c.value === '';
+
+	// take a set of comparators and determine whether there
+	// exists a version which can satisfy it
+	const isSatisfiable = (comparators, options) => {
+	  let result = true;
+	  const remainingComparators = comparators.slice();
+	  let testComparator = remainingComparators.pop();
+
+	  while (result && remainingComparators.length) {
+	    result = remainingComparators.every((otherComparator) => {
+	      return testComparator.intersects(otherComparator, options)
+	    });
+
+	    testComparator = remainingComparators.pop();
+	  }
+
+	  return result
+	};
+
+	// comprised of xranges, tildes, stars, and gtlt's at this point.
+	// already replaced the hyphen ranges
+	// turn into a set of JUST comparators.
+	const parseComparator = (comp, options) => {
+	  comp = comp.replace(re[t.BUILD], '');
+	  debug('comp', comp, options);
+	  comp = replaceCarets(comp, options);
+	  debug('caret', comp);
+	  comp = replaceTildes(comp, options);
+	  debug('tildes', comp);
+	  comp = replaceXRanges(comp, options);
+	  debug('xrange', comp);
+	  comp = replaceStars(comp, options);
+	  debug('stars', comp);
+	  return comp
+	};
+
+	const isX = id => !id || id.toLowerCase() === 'x' || id === '*';
+
+	const invalidXRangeOrder = (M, m, p) => (
+	  (isX(M) && !isX(m)) ||
+	  (isX(m) && p && !isX(p))
+	);
+
+	// ~, ~> --> * (any, kinda silly)
+	// ~2, ~2.x, ~2.x.x, ~>2, ~>2.x ~>2.x.x --> >=2.0.0 <3.0.0-0
+	// ~2.0, ~2.0.x, ~>2.0, ~>2.0.x --> >=2.0.0 <2.1.0-0
+	// ~1.2, ~1.2.x, ~>1.2, ~>1.2.x --> >=1.2.0 <1.3.0-0
+	// ~1.2.3, ~>1.2.3 --> >=1.2.3 <1.3.0-0
+	// ~1.2.0, ~>1.2.0 --> >=1.2.0 <1.3.0-0
+	// ~0.0.1 --> >=0.0.1 <0.1.0-0
+	const replaceTildes = (comp, options) => {
+	  return comp
+	    .trim()
+	    .split(/\s+/)
+	    .map((c) => replaceTilde(c, options))
+	    .join(' ')
+	};
+
+	const replaceTilde = (comp, options) => {
+	  const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
+	  // if we're including prereleases in the match, then the lower bound is
+	  // -0, the lowest possible prerelease value, just like x-ranges and carets.
+	  // this keeps `~1.2` equivalent to the `1.2.x` x-range it's documented as.
+	  const z = options.includePrerelease ? '-0' : '';
+	  return comp.replace(r, (_, M, m, p, pr) => {
+	    debug('tilde', comp, _, M, m, p, pr);
+	    let ret;
+
+	    if (isX(M)) {
+	      ret = '';
+	    } else if (isX(m)) {
+	      ret = `>=${M}.0.0${z} <${+M + 1}.0.0-0`;
+	    } else if (isX(p)) {
+	      // ~1.2 == >=1.2.0 <1.3.0-0
+	      ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
+	    } else if (pr) {
+	      debug('replaceTilde pr', pr);
+	      ret = `>=${M}.${m}.${p}-${pr
+	      } <${M}.${+m + 1}.0-0`;
+	    } else {
+	      // ~1.2.3 == >=1.2.3 <1.3.0-0
+	      ret = `>=${M}.${m}.${p
+	      } <${M}.${+m + 1}.0-0`;
+	    }
+
+	    debug('tilde return', ret);
+	    return ret
+	  })
+	};
+
+	// ^ --> * (any, kinda silly)
+	// ^2, ^2.x, ^2.x.x --> >=2.0.0 <3.0.0-0
+	// ^2.0, ^2.0.x --> >=2.0.0 <3.0.0-0
+	// ^1.2, ^1.2.x --> >=1.2.0 <2.0.0-0
+	// ^1.2.3 --> >=1.2.3 <2.0.0-0
+	// ^1.2.0 --> >=1.2.0 <2.0.0-0
+	// ^0.0.1 --> >=0.0.1 <0.0.2-0
+	// ^0.1.0 --> >=0.1.0 <0.2.0-0
+	const replaceCarets = (comp, options) => {
+	  return comp
+	    .trim()
+	    .split(/\s+/)
+	    .map((c) => replaceCaret(c, options))
+	    .join(' ')
+	};
+
+	const replaceCaret = (comp, options) => {
+	  debug('caret', comp, options);
+	  const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
+	  const z = options.includePrerelease ? '-0' : '';
+	  return comp.replace(r, (_, M, m, p, pr) => {
+	    debug('caret', comp, _, M, m, p, pr);
+	    let ret;
+
+	    if (isX(M)) {
+	      ret = '';
+	    } else if (isX(m)) {
+	      ret = `>=${M}.0.0${z} <${+M + 1}.0.0-0`;
+	    } else if (isX(p)) {
+	      if (M === '0') {
+	        ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
+	      } else {
+	        ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
+	      }
+	    } else if (pr) {
+	      debug('replaceCaret pr', pr);
+	      if (M === '0') {
+	        if (m === '0') {
+	          ret = `>=${M}.${m}.${p}-${pr
+	          } <${M}.${m}.${+p + 1}-0`;
+	        } else {
+	          ret = `>=${M}.${m}.${p}-${pr
+	          } <${M}.${+m + 1}.0-0`;
+	        }
+	      } else {
+	        ret = `>=${M}.${m}.${p}-${pr
+	        } <${+M + 1}.0.0-0`;
+	      }
+	    } else {
+	      debug('no pr');
+	      if (M === '0') {
+	        if (m === '0') {
+	          ret = `>=${M}.${m}.${p
+	          } <${M}.${m}.${+p + 1}-0`;
+	        } else {
+	          ret = `>=${M}.${m}.${p
+	          } <${M}.${+m + 1}.0-0`;
+	        }
+	      } else {
+	        ret = `>=${M}.${m}.${p
+	        } <${+M + 1}.0.0-0`;
+	      }
+	    }
+
+	    debug('caret return', ret);
+	    return ret
+	  })
+	};
+
+	const replaceXRanges = (comp, options) => {
+	  debug('replaceXRanges', comp, options);
+	  return comp
+	    .split(/\s+/)
+	    .map((c) => replaceXRange(c, options))
+	    .join(' ')
+	};
+
+	const replaceXRange = (comp, options) => {
+	  comp = comp.trim();
+	  const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
+	  return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
+	    debug('xRange', comp, ret, gtlt, M, m, p, pr);
+	    if (invalidXRangeOrder(M, m, p)) {
+	      return comp
+	    }
+
+	    const xM = isX(M);
+	    const xm = xM || isX(m);
+	    const xp = xm || isX(p);
+	    const anyX = xp;
+
+	    if (gtlt === '=' && anyX) {
+	      gtlt = '';
+	    }
+
+	    // if we're including prereleases in the match, then we need
+	    // to fix this to -0, the lowest possible prerelease value
+	    pr = options.includePrerelease ? '-0' : '';
+
+	    if (xM) {
+	      if (gtlt === '>' || gtlt === '<') {
+	        // nothing is allowed
+	        ret = '<0.0.0-0';
+	      } else {
+	        // nothing is forbidden
+	        ret = '*';
+	      }
+	    } else if (gtlt && anyX) {
+	      // we know patch is an x, because we have any x at all.
+	      // replace X with 0
+	      if (xm) {
+	        m = 0;
+	      }
+	      p = 0;
+
+	      if (gtlt === '>') {
+	        // >1 => >=2.0.0
+	        // >1.2 => >=1.3.0
+	        gtlt = '>=';
+	        if (xm) {
+	          M = +M + 1;
+	          m = 0;
+	          p = 0;
+	        } else {
+	          m = +m + 1;
+	          p = 0;
+	        }
+	      } else if (gtlt === '<=') {
+	        // <=0.7.x is actually <0.8.0, since any 0.7.x should
+	        // pass.  Similarly, <=7.x is actually <8.0.0, etc.
+	        gtlt = '<';
+	        if (xm) {
+	          M = +M + 1;
+	        } else {
+	          m = +m + 1;
+	        }
+	      }
+
+	      if (gtlt === '<') {
+	        pr = '-0';
+	      }
+
+	      ret = `${gtlt + M}.${m}.${p}${pr}`;
+	    } else if (xm) {
+	      ret = `>=${M}.0.0${pr} <${+M + 1}.0.0-0`;
+	    } else if (xp) {
+	      ret = `>=${M}.${m}.0${pr
+	      } <${M}.${+m + 1}.0-0`;
+	    }
+
+	    debug('xRange return', ret);
+
+	    return ret
+	  })
+	};
+
+	// Because * is AND-ed with everything else in the comparator,
+	// and '' means "any version", just remove the *s entirely.
+	const replaceStars = (comp, options) => {
+	  debug('replaceStars', comp, options);
+	  // Looseness is ignored here.  star is always as loose as it gets!
+	  return comp
+	    .trim()
+	    .replace(re[t.STAR], '')
+	};
+
+	const replaceGTE0 = (comp, options) => {
+	  debug('replaceGTE0', comp, options);
+	  return comp
+	    .trim()
+	    .replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], '')
+	};
+
+	// This function is passed to string.replace(re[t.HYPHENRANGE])
+	// M, m, patch, prerelease, build
+	// 1.2 - 3.4.5 => >=1.2.0 <=3.4.5
+	// 1.2.3 - 3.4 => >=1.2.0 <3.5.0-0 Any 3.4.x will do
+	// 1.2 - 3.4 => >=1.2.0 <3.5.0-0
+	// TODO build?
+	const hyphenReplace = incPr => ($0,
+	  from, fM, fm, fp, fpr, fb,
+	  to, tM, tm, tp, tpr) => {
+	  if (isX(fM)) {
+	    from = '';
+	  } else if (isX(fm)) {
+	    from = `>=${fM}.0.0${incPr ? '-0' : ''}`;
+	  } else if (isX(fp)) {
+	    from = `>=${fM}.${fm}.0${incPr ? '-0' : ''}`;
+	  } else if (fpr) {
+	    from = `>=${from}`;
+	  } else {
+	    from = `>=${from}${incPr ? '-0' : ''}`;
+	  }
+
+	  if (isX(tM)) {
+	    to = '';
+	  } else if (isX(tm)) {
+	    to = `<${+tM + 1}.0.0-0`;
+	  } else if (isX(tp)) {
+	    to = `<${tM}.${+tm + 1}.0-0`;
+	  } else if (tpr) {
+	    to = `<=${tM}.${tm}.${tp}-${tpr}`;
+	  } else if (incPr) {
+	    to = `<${tM}.${tm}.${+tp + 1}-0`;
+	  } else {
+	    to = `<=${to}`;
+	  }
+
+	  return `${from} ${to}`.trim()
+	};
+
+	const testSet = (set, version, options) => {
+	  for (let i = 0; i < set.length; i++) {
+	    if (!set[i].test(version)) {
+	      return false
+	    }
+	  }
+
+	  if (version.prerelease.length && !options.includePrerelease) {
+	    // Find the set of versions that are allowed to have prereleases
+	    // For example, ^1.2.3-pr.1 desugars to >=1.2.3-pr.1 <2.0.0
+	    // That should allow `1.2.3-pr.2` to pass.
+	    // However, `1.2.4-alpha.notready` should NOT be allowed,
+	    // even though it's within the range set by the comparators.
+	    for (let i = 0; i < set.length; i++) {
+	      debug(set[i].semver);
+	      if (set[i].semver === Comparator.ANY) {
+	        continue
+	      }
+
+	      if (set[i].semver.prerelease.length > 0) {
+	        const allowed = set[i].semver;
+	        if (allowed.major === version.major &&
+	            allowed.minor === version.minor &&
+	            allowed.patch === version.patch) {
+	          return true
+	        }
+	      }
+	    }
+
+	    // Version has a -pre, but it's not one of the ones we like.
+	    return false
+	  }
+
+	  return true
+	};
+	return range;
+}
+
+var comparator;
+var hasRequiredComparator;
+
+function requireComparator () {
+	if (hasRequiredComparator) return comparator;
+	hasRequiredComparator = 1;
+
+	const ANY = Symbol('SemVer ANY');
+	// hoisted class for cyclic dependency
+	class Comparator {
+	  static get ANY () {
+	    return ANY
+	  }
+
+	  constructor (comp, options) {
+	    options = parseOptions(options);
+
+	    if (comp instanceof Comparator) {
+	      if (comp.loose === !!options.loose) {
+	        return comp
+	      } else {
+	        comp = comp.value;
+	      }
+	    }
+
+	    comp = comp.trim().split(/\s+/).join(' ');
+	    debug('comparator', comp, options);
+	    this.options = options;
+	    this.loose = !!options.loose;
+	    this.parse(comp);
+
+	    if (this.semver === ANY) {
+	      this.value = '';
+	    } else {
+	      this.value = this.operator + this.semver.version;
+	    }
+
+	    debug('comp', this);
+	  }
+
+	  parse (comp) {
+	    const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
+	    const m = comp.match(r);
+
+	    if (!m) {
+	      throw new TypeError(`Invalid comparator: ${comp}`)
+	    }
+
+	    this.operator = m[1] !== undefined ? m[1] : '';
+	    if (this.operator === '=') {
+	      this.operator = '';
+	    }
+
+	    // if it literally is just '>' or '' then allow anything.
+	    if (!m[2]) {
+	      this.semver = ANY;
+	    } else {
+	      this.semver = new SemVer(m[2], this.options.loose);
+	    }
+	  }
+
+	  toString () {
+	    return this.value
+	  }
+
+	  test (version) {
+	    debug('Comparator.test', version, this.options.loose);
+
+	    if (this.semver === ANY || version === ANY) {
+	      return true
+	    }
+
+	    if (typeof version === 'string') {
+	      try {
+	        version = new SemVer(version, this.options);
+	      } catch (er) {
+	        return false
+	      }
+	    }
+
+	    return cmp(version, this.operator, this.semver, this.options)
+	  }
+
+	  intersects (comp, options) {
+	    if (!(comp instanceof Comparator)) {
+	      throw new TypeError('a Comparator is required')
+	    }
+
+	    if (this.operator === '') {
+	      if (this.value === '') {
+	        return true
+	      }
+	      return new Range(comp.value, options).test(this.value)
+	    } else if (comp.operator === '') {
+	      if (comp.value === '') {
+	        return true
+	      }
+	      return new Range(this.value, options).test(comp.semver)
+	    }
+
+	    options = parseOptions(options);
+
+	    // Special cases where nothing can possibly be lower
+	    if (options.includePrerelease &&
+	      (this.value === '<0.0.0-0' || comp.value === '<0.0.0-0')) {
+	      return false
+	    }
+	    if (!options.includePrerelease &&
+	      (this.value.startsWith('<0.0.0') || comp.value.startsWith('<0.0.0'))) {
+	      return false
+	    }
+
+	    // Same direction increasing (> or >=)
+	    if (this.operator.startsWith('>') && comp.operator.startsWith('>')) {
+	      return true
+	    }
+	    // Same direction decreasing (< or <=)
+	    if (this.operator.startsWith('<') && comp.operator.startsWith('<')) {
+	      return true
+	    }
+	    // same SemVer and both sides are inclusive (<= or >=)
+	    if (
+	      (this.semver.version === comp.semver.version) &&
+	      this.operator.includes('=') && comp.operator.includes('=')) {
+	      return true
+	    }
+	    // opposite directions less than
+	    if (cmp(this.semver, '<', comp.semver, options) &&
+	      this.operator.startsWith('>') && comp.operator.startsWith('<')) {
+	      return true
+	    }
+	    // opposite directions greater than
+	    if (cmp(this.semver, '>', comp.semver, options) &&
+	      this.operator.startsWith('<') && comp.operator.startsWith('>')) {
+	      return true
+	    }
+	    return false
+	  }
+	}
+
+	comparator = Comparator;
+
+	const parseOptions = requireParseOptions();
+	const { safeRe: re, t } = requireRe();
+	const cmp = requireCmp();
+	const debug = requireDebug();
+	const SemVer = requireSemver$1();
+	const Range = requireRange();
+	return comparator;
+}
+
+var satisfies_1;
+var hasRequiredSatisfies;
+
+function requireSatisfies () {
+	if (hasRequiredSatisfies) return satisfies_1;
+	hasRequiredSatisfies = 1;
+
+	const Range = requireRange();
+	const satisfies = (version, range, options) => {
+	  try {
+	    range = new Range(range, options);
+	  } catch (er) {
+	    return false
+	  }
+	  return range.test(version)
+	};
+	satisfies_1 = satisfies;
+	return satisfies_1;
+}
+
+var toComparators_1;
+var hasRequiredToComparators;
+
+function requireToComparators () {
+	if (hasRequiredToComparators) return toComparators_1;
+	hasRequiredToComparators = 1;
+
+	const Range = requireRange();
+
+	// Mostly just for testing and legacy API reasons
+	const toComparators = (range, options) =>
+	  new Range(range, options).set
+	    .map(comp => comp.map(c => c.value).join(' ').trim().split(' '));
+
+	toComparators_1 = toComparators;
+	return toComparators_1;
+}
+
+var maxSatisfying_1;
+var hasRequiredMaxSatisfying;
+
+function requireMaxSatisfying () {
+	if (hasRequiredMaxSatisfying) return maxSatisfying_1;
+	hasRequiredMaxSatisfying = 1;
+
+	const SemVer = requireSemver$1();
+	const Range = requireRange();
+
+	const maxSatisfying = (versions, range, options) => {
+	  let max = null;
+	  let maxSV = null;
+	  let rangeObj = null;
+	  try {
+	    rangeObj = new Range(range, options);
+	  } catch (er) {
+	    return null
+	  }
+	  versions.forEach((v) => {
+	    if (rangeObj.test(v)) {
+	      // satisfies(v, range, options)
+	      if (!max || maxSV.compare(v) === -1) {
+	        // compare(max, v, true)
+	        max = v;
+	        maxSV = new SemVer(max, options);
+	      }
+	    }
+	  });
+	  return max
+	};
+	maxSatisfying_1 = maxSatisfying;
+	return maxSatisfying_1;
+}
+
+var minSatisfying_1;
+var hasRequiredMinSatisfying;
+
+function requireMinSatisfying () {
+	if (hasRequiredMinSatisfying) return minSatisfying_1;
+	hasRequiredMinSatisfying = 1;
+
+	const SemVer = requireSemver$1();
+	const Range = requireRange();
+	const minSatisfying = (versions, range, options) => {
+	  let min = null;
+	  let minSV = null;
+	  let rangeObj = null;
+	  try {
+	    rangeObj = new Range(range, options);
+	  } catch (er) {
+	    return null
+	  }
+	  versions.forEach((v) => {
+	    if (rangeObj.test(v)) {
+	      // satisfies(v, range, options)
+	      if (!min || minSV.compare(v) === 1) {
+	        // compare(min, v, true)
+	        min = v;
+	        minSV = new SemVer(min, options);
+	      }
+	    }
+	  });
+	  return min
+	};
+	minSatisfying_1 = minSatisfying;
+	return minSatisfying_1;
+}
+
+var minVersion_1;
+var hasRequiredMinVersion;
+
+function requireMinVersion () {
+	if (hasRequiredMinVersion) return minVersion_1;
+	hasRequiredMinVersion = 1;
+
+	const SemVer = requireSemver$1();
+	const Range = requireRange();
+	const gt = requireGt();
+
+	const minVersion = (range, loose) => {
+	  range = new Range(range, loose);
+
+	  let minver = new SemVer('0.0.0');
+	  if (range.test(minver)) {
+	    return minver
+	  }
+
+	  minver = new SemVer('0.0.0-0');
+	  if (range.test(minver)) {
+	    return minver
+	  }
+
+	  minver = null;
+	  for (let i = 0; i < range.set.length; ++i) {
+	    const comparators = range.set[i];
+
+	    let setMin = null;
+	    comparators.forEach((comparator) => {
+	      // Clone to avoid manipulating the comparator's semver object.
+	      const compver = new SemVer(comparator.semver.version);
+	      switch (comparator.operator) {
+	        case '>':
+	          if (compver.prerelease.length === 0) {
+	            compver.patch++;
+	          } else {
+	            compver.prerelease.push(0);
+	          }
+	          compver.raw = compver.format();
+	          /* fallthrough */
+	        case '':
+	        case '>=':
+	          if (!setMin || gt(compver, setMin)) {
+	            setMin = compver;
+	          }
+	          break
+	        case '<':
+	        case '<=':
+	          /* Ignore maximum versions */
+	          break
+	        /* istanbul ignore next */
+	        default:
+	          throw new Error(`Unexpected operation: ${comparator.operator}`)
+	      }
+	    });
+	    if (setMin && (!minver || gt(minver, setMin))) {
+	      minver = setMin;
+	    }
+	  }
+
+	  if (minver && range.test(minver)) {
+	    return minver
+	  }
+
+	  return null
+	};
+	minVersion_1 = minVersion;
+	return minVersion_1;
+}
+
+var valid;
+var hasRequiredValid;
+
+function requireValid () {
+	if (hasRequiredValid) return valid;
+	hasRequiredValid = 1;
+
+	const Range = requireRange();
+	const validRange = (range, options) => {
+	  try {
+	    // Return '*' instead of '' so that truthiness works.
+	    // This will throw if it's invalid anyway
+	    return new Range(range, options).range || '*'
+	  } catch (er) {
+	    return null
+	  }
+	};
+	valid = validRange;
+	return valid;
+}
+
+var outside_1;
+var hasRequiredOutside;
+
+function requireOutside () {
+	if (hasRequiredOutside) return outside_1;
+	hasRequiredOutside = 1;
+
+	const SemVer = requireSemver$1();
+	const Comparator = requireComparator();
+	const { ANY } = Comparator;
+	const Range = requireRange();
+	const satisfies = requireSatisfies();
+	const gt = requireGt();
+	const lt = requireLt();
+	const lte = requireLte();
+	const gte = requireGte();
+
+	const outside = (version, range, hilo, options) => {
+	  version = new SemVer(version, options);
+	  range = new Range(range, options);
+
+	  let gtfn, ltefn, ltfn, comp, ecomp;
+	  switch (hilo) {
+	    case '>':
+	      gtfn = gt;
+	      ltefn = lte;
+	      ltfn = lt;
+	      comp = '>';
+	      ecomp = '>=';
+	      break
+	    case '<':
+	      gtfn = lt;
+	      ltefn = gte;
+	      ltfn = gt;
+	      comp = '<';
+	      ecomp = '<=';
+	      break
+	    default:
+	      throw new TypeError('Must provide a hilo val of "<" or ">"')
+	  }
+
+	  // If it satisfies the range it is not outside
+	  if (satisfies(version, range, options)) {
+	    return false
+	  }
+
+	  // From now on, variable terms are as if we're in "gtr" mode.
+	  // but note that everything is flipped for the "ltr" function.
+
+	  for (let i = 0; i < range.set.length; ++i) {
+	    const comparators = range.set[i];
+
+	    let high = null;
+	    let low = null;
+
+	    comparators.forEach((comparator) => {
+	      if (comparator.semver === ANY) {
+	        comparator = new Comparator('>=0.0.0');
+	      }
+	      high = high || comparator;
+	      low = low || comparator;
+	      if (gtfn(comparator.semver, high.semver, options)) {
+	        high = comparator;
+	      } else if (ltfn(comparator.semver, low.semver, options)) {
+	        low = comparator;
+	      }
+	    });
+
+	    // If the edge version comparator has a operator then our version
+	    // isn't outside it
+	    if (high.operator === comp || high.operator === ecomp) {
+	      return false
+	    }
+
+	    // If the lowest version comparator has an operator and our version
+	    // is less than it then it isn't higher than the range
+	    if ((!low.operator || low.operator === comp) &&
+	        ltefn(version, low.semver)) {
+	      return false
+	    } else if (low.operator === ecomp && ltfn(version, low.semver)) {
+	      return false
+	    }
+	  }
+	  return true
+	};
+
+	outside_1 = outside;
+	return outside_1;
+}
+
+var gtr_1;
+var hasRequiredGtr;
+
+function requireGtr () {
+	if (hasRequiredGtr) return gtr_1;
+	hasRequiredGtr = 1;
+
+	// Determine if version is greater than all the versions possible in the range.
+	const outside = requireOutside();
+	const gtr = (version, range, options) => outside(version, range, '>', options);
+	gtr_1 = gtr;
+	return gtr_1;
+}
+
+var ltr_1;
+var hasRequiredLtr;
+
+function requireLtr () {
+	if (hasRequiredLtr) return ltr_1;
+	hasRequiredLtr = 1;
+
+	const outside = requireOutside();
+	// Determine if version is less than all the versions possible in the range
+	const ltr = (version, range, options) => outside(version, range, '<', options);
+	ltr_1 = ltr;
+	return ltr_1;
+}
+
+var intersects_1;
+var hasRequiredIntersects;
+
+function requireIntersects () {
+	if (hasRequiredIntersects) return intersects_1;
+	hasRequiredIntersects = 1;
+
+	const Range = requireRange();
+	const intersects = (r1, r2, options) => {
+	  r1 = new Range(r1, options);
+	  r2 = new Range(r2, options);
+	  return r1.intersects(r2, options)
+	};
+	intersects_1 = intersects;
+	return intersects_1;
+}
+
+var simplify;
+var hasRequiredSimplify;
+
+function requireSimplify () {
+	if (hasRequiredSimplify) return simplify;
+	hasRequiredSimplify = 1;
+
+	// given a set of versions and a range, create a "simplified" range
+	// that includes the same versions that the original range does
+	// If the original range is shorter than the simplified one, return that.
+	const satisfies = requireSatisfies();
+	const compare = requireCompare();
+	simplify = (versions, range, options) => {
+	  const set = [];
+	  let first = null;
+	  let prev = null;
+	  const v = versions.sort((a, b) => compare(a, b, options));
+	  for (const version of v) {
+	    const included = satisfies(version, range, options);
+	    if (included) {
+	      prev = version;
+	      if (!first) {
+	        first = version;
+	      }
+	    } else {
+	      if (prev) {
+	        set.push([first, prev]);
+	      }
+	      prev = null;
+	      first = null;
+	    }
+	  }
+	  if (first) {
+	    set.push([first, null]);
+	  }
+
+	  const ranges = [];
+	  for (const [min, max] of set) {
+	    if (min === max) {
+	      ranges.push(min);
+	    } else if (!max && min === v[0]) {
+	      ranges.push('*');
+	    } else if (!max) {
+	      ranges.push(`>=${min}`);
+	    } else if (min === v[0]) {
+	      ranges.push(`<=${max}`);
+	    } else {
+	      ranges.push(`${min} - ${max}`);
+	    }
+	  }
+	  const simplified = ranges.join(' || ');
+	  const original = typeof range.raw === 'string' ? range.raw : String(range);
+	  return simplified.length < original.length ? simplified : range
+	};
+	return simplify;
+}
+
+var subset_1;
+var hasRequiredSubset;
+
+function requireSubset () {
+	if (hasRequiredSubset) return subset_1;
+	hasRequiredSubset = 1;
+
+	const Range = requireRange();
+	const Comparator = requireComparator();
+	const { ANY } = Comparator;
+	const satisfies = requireSatisfies();
+	const compare = requireCompare();
+
+	// Complex range `r1 || r2 || ...` is a subset of `R1 || R2 || ...` iff:
+	// - Every simple range `r1, r2, ...` is a null set, OR
+	// - Every simple range `r1, r2, ...` which is not a null set is a subset of
+	//   some `R1, R2, ...`
+	//
+	// Simple range `c1 c2 ...` is a subset of simple range `C1 C2 ...` iff:
+	// - If c is only the ANY comparator
+	//   - If C is only the ANY comparator, return true
+	//   - Else if in prerelease mode, return false
+	//   - else replace c with `[>=0.0.0]`
+	// - If C is only the ANY comparator
+	//   - if in prerelease mode, return true
+	//   - else replace C with `[>=0.0.0]`
+	// - Let EQ be the set of = comparators in c
+	// - If EQ is more than one, return true (null set)
+	// - Let GT be the highest > or >= comparator in c
+	// - Let LT be the lowest < or <= comparator in c
+	// - If GT and LT, and GT.semver > LT.semver, return true (null set)
+	// - If any C is a = range, and GT or LT are set, return false
+	// - If EQ
+	//   - If GT, and EQ does not satisfy GT, return true (null set)
+	//   - If LT, and EQ does not satisfy LT, return true (null set)
+	//   - If EQ satisfies every C, return true
+	//   - Else return false
+	// - If GT
+	//   - If GT.semver is lower than any > or >= comp in C, return false
+	//   - If GT is >=, and GT.semver does not satisfy every C, return false
+	//   - If GT.semver has a prerelease, and not in prerelease mode
+	//     - If no C has a prerelease and the GT.semver tuple, return false
+	// - If LT
+	//   - If LT.semver is greater than any < or <= comp in C, return false
+	//   - If LT is <=, and LT.semver does not satisfy every C, return false
+	//   - If LT.semver has a prerelease, and not in prerelease mode
+	//     - If no C has a prerelease and the LT.semver tuple, return false
+	// - Else return true
+
+	const subset = (sub, dom, options = {}) => {
+	  if (sub === dom) {
+	    return true
+	  }
+
+	  sub = new Range(sub, options);
+	  dom = new Range(dom, options);
+	  let sawNonNull = false;
+
+	  OUTER: for (const simpleSub of sub.set) {
+	    for (const simpleDom of dom.set) {
+	      const isSub = simpleSubset(simpleSub, simpleDom, options);
+	      sawNonNull = sawNonNull || isSub !== null;
+	      if (isSub) {
+	        continue OUTER
+	      }
+	    }
+	    // the null set is a subset of everything, but null simple ranges in
+	    // a complex range should be ignored.  so if we saw a non-null range,
+	    // then we know this isn't a subset, but if EVERY simple range was null,
+	    // then it is a subset.
+	    if (sawNonNull) {
+	      return false
+	    }
+	  }
+	  return true
+	};
+
+	const minimumVersionWithPreRelease = [new Comparator('>=0.0.0-0')];
+	const minimumVersion = [new Comparator('>=0.0.0')];
+
+	const simpleSubset = (sub, dom, options) => {
+	  if (sub === dom) {
+	    return true
+	  }
+
+	  if (sub.length === 1 && sub[0].semver === ANY) {
+	    if (dom.length === 1 && dom[0].semver === ANY) {
+	      return true
+	    } else if (options.includePrerelease) {
+	      sub = minimumVersionWithPreRelease;
+	    } else {
+	      sub = minimumVersion;
+	    }
+	  }
+
+	  if (dom.length === 1 && dom[0].semver === ANY) {
+	    if (options.includePrerelease) {
+	      return true
+	    } else {
+	      dom = minimumVersion;
+	    }
+	  }
+
+	  const eqSet = new Set();
+	  let gt, lt;
+	  for (const c of sub) {
+	    if (c.operator === '>' || c.operator === '>=') {
+	      gt = higherGT(gt, c, options);
+	    } else if (c.operator === '<' || c.operator === '<=') {
+	      lt = lowerLT(lt, c, options);
+	    } else {
+	      eqSet.add(c.semver);
+	    }
+	  }
+
+	  if (eqSet.size > 1) {
+	    return null
+	  }
+
+	  let gtltComp;
+	  if (gt && lt) {
+	    gtltComp = compare(gt.semver, lt.semver, options);
+	    if (gtltComp > 0) {
+	      return null
+	    } else if (gtltComp === 0 && (gt.operator !== '>=' || lt.operator !== '<=')) {
+	      return null
+	    }
+	  }
+
+	  // will iterate one or zero times
+	  for (const eq of eqSet) {
+	    if (gt && !satisfies(eq, String(gt), options)) {
+	      return null
+	    }
+
+	    if (lt && !satisfies(eq, String(lt), options)) {
+	      return null
+	    }
+
+	    for (const c of dom) {
+	      if (!satisfies(eq, String(c), options)) {
+	        return false
+	      }
+	    }
+
+	    return true
+	  }
+
+	  let higher, lower;
+	  let hasDomLT, hasDomGT;
+	  // if the subset has a prerelease, we need a comparator in the superset
+	  // with the same tuple and a prerelease, or it's not a subset
+	  let needDomLTPre = lt &&
+	    !options.includePrerelease &&
+	    lt.semver.prerelease.length ? lt.semver : false;
+	  let needDomGTPre = gt &&
+	    !options.includePrerelease &&
+	    gt.semver.prerelease.length ? gt.semver : false;
+	  // exception: <1.2.3-0 is the same as <1.2.3
+	  if (needDomLTPre && needDomLTPre.prerelease.length === 1 &&
+	      lt.operator === '<' && needDomLTPre.prerelease[0] === 0) {
+	    needDomLTPre = false;
+	  }
+
+	  for (const c of dom) {
+	    hasDomGT = hasDomGT || c.operator === '>' || c.operator === '>=';
+	    hasDomLT = hasDomLT || c.operator === '<' || c.operator === '<=';
+	    if (gt) {
+	      if (needDomGTPre) {
+	        if (c.semver.prerelease && c.semver.prerelease.length &&
+	            c.semver.major === needDomGTPre.major &&
+	            c.semver.minor === needDomGTPre.minor &&
+	            c.semver.patch === needDomGTPre.patch) {
+	          needDomGTPre = false;
+	        }
+	      }
+	      if (c.operator === '>' || c.operator === '>=') {
+	        higher = higherGT(gt, c, options);
+	        if (higher === c && higher !== gt) {
+	          return false
+	        }
+	      } else if (gt.operator === '>=' && !c.test(gt.semver)) {
+	        return false
+	      }
+	    }
+	    if (lt) {
+	      if (needDomLTPre) {
+	        if (c.semver.prerelease && c.semver.prerelease.length &&
+	            c.semver.major === needDomLTPre.major &&
+	            c.semver.minor === needDomLTPre.minor &&
+	            c.semver.patch === needDomLTPre.patch) {
+	          needDomLTPre = false;
+	        }
+	      }
+	      if (c.operator === '<' || c.operator === '<=') {
+	        lower = lowerLT(lt, c, options);
+	        if (lower === c && lower !== lt) {
+	          return false
+	        }
+	      } else if (lt.operator === '<=' && !c.test(lt.semver)) {
+	        return false
+	      }
+	    }
+	    if (!c.operator && (lt || gt) && gtltComp !== 0) {
+	      return false
+	    }
+	  }
+
+	  // if there was a < or >, and nothing in the dom, then must be false
+	  // UNLESS it was limited by another range in the other direction.
+	  // Eg, >1.0.0 <1.0.1 is still a subset of <2.0.0
+	  if (gt && hasDomLT && !lt && gtltComp !== 0) {
+	    return false
+	  }
+
+	  if (lt && hasDomGT && !gt && gtltComp !== 0) {
+	    return false
+	  }
+
+	  // we needed a prerelease range in a specific tuple, but didn't get one
+	  // then this isn't a subset.  eg >=1.2.3-pre is not a subset of >=1.0.0,
+	  // because it includes prereleases in the 1.2.3 tuple
+	  if (needDomGTPre || needDomLTPre) {
+	    return false
+	  }
+
+	  return true
+	};
+
+	// >=1.2.3 is lower than >1.2.3
+	const higherGT = (a, b, options) => {
+	  if (!a) {
+	    return b
+	  }
+	  const comp = compare(a.semver, b.semver, options);
+	  return comp > 0 ? a
+	    : comp < 0 ? b
+	    : b.operator === '>' && a.operator === '>=' ? b
+	    : a
+	};
+
+	// <=1.2.3 is higher than <1.2.3
+	const lowerLT = (a, b, options) => {
+	  if (!a) {
+	    return b
+	  }
+	  const comp = compare(a.semver, b.semver, options);
+	  return comp < 0 ? a
+	    : comp > 0 ? b
+	    : b.operator === '<' && a.operator === '<=' ? b
+	    : a
+	};
+
+	subset_1 = subset;
+	return subset_1;
+}
+
+var semver;
+var hasRequiredSemver;
+
+function requireSemver () {
+	if (hasRequiredSemver) return semver;
+	hasRequiredSemver = 1;
+
+	// just pre-load all the stuff that index.js lazily exports
+	const internalRe = requireRe();
+	const constants = requireConstants();
+	const SemVer = requireSemver$1();
+	const identifiers = requireIdentifiers();
+	const parse = requireParse();
+	const valid = requireValid$1();
+	const clean = requireClean();
+	const inc = requireInc();
+	const diff = requireDiff();
+	const major = requireMajor();
+	const minor = requireMinor();
+	const patch = requirePatch();
+	const prerelease = requirePrerelease();
+	const compare = requireCompare();
+	const rcompare = requireRcompare();
+	const compareLoose = requireCompareLoose();
+	const compareBuild = requireCompareBuild();
+	const sort = requireSort();
+	const rsort = requireRsort();
+	const gt = requireGt();
+	const lt = requireLt();
+	const eq = requireEq();
+	const neq = requireNeq();
+	const gte = requireGte();
+	const lte = requireLte();
+	const cmp = requireCmp();
+	const coerce = requireCoerce();
+	const truncate = requireTruncate();
+	const Comparator = requireComparator();
+	const Range = requireRange();
+	const satisfies = requireSatisfies();
+	const toComparators = requireToComparators();
+	const maxSatisfying = requireMaxSatisfying();
+	const minSatisfying = requireMinSatisfying();
+	const minVersion = requireMinVersion();
+	const validRange = requireValid();
+	const outside = requireOutside();
+	const gtr = requireGtr();
+	const ltr = requireLtr();
+	const intersects = requireIntersects();
+	const simplifyRange = requireSimplify();
+	const subset = requireSubset();
+	semver = {
+	  parse,
+	  valid,
+	  clean,
+	  inc,
+	  diff,
+	  major,
+	  minor,
+	  patch,
+	  prerelease,
+	  compare,
+	  rcompare,
+	  compareLoose,
+	  compareBuild,
+	  sort,
+	  rsort,
+	  gt,
+	  lt,
+	  eq,
+	  neq,
+	  gte,
+	  lte,
+	  cmp,
+	  coerce,
+	  truncate,
+	  Comparator,
+	  Range,
+	  satisfies,
+	  toComparators,
+	  maxSatisfying,
+	  minSatisfying,
+	  minVersion,
+	  validRange,
+	  outside,
+	  gtr,
+	  ltr,
+	  intersects,
+	  simplifyRange,
+	  subset,
+	  SemVer,
+	  re: internalRe.re,
+	  src: internalRe.src,
+	  tokens: internalRe.t,
+	  SEMVER_SPEC_VERSION: constants.SEMVER_SPEC_VERSION,
+	  RELEASE_TYPES: constants.RELEASE_TYPES,
+	  compareIdentifiers: identifiers.compareIdentifiers,
+	  rcompareIdentifiers: identifiers.rcompareIdentifiers,
+	};
+	return semver;
+}
+
+var semverExports = requireSemver();
+
+// Pure comparison of the pipeline's configured nf-core/tools version against
+// the latest release. Uses semver, a well-maintained dependency already
+// trusted by npm itself, instead of a hand-rolled comparison: '2.10' must
+// sort after '2.9', which a string or naive numeric split gets wrong, and a
+// development suffix such as '3.27.0dev' is not valid strict semver on its
+// own (no hyphen before the pre-release tag).
+/**
+ * Compares `pipelineVersionRaw` (the pipeline's `nf_core_version`, from
+ * .nf-core.yml on the pull request) against `latestVersionRaw` (a real
+ * GitHub release tag, assumed already version-shaped).
+ *
+ * semver's coerce() extracts a leading major.minor.patch and drops anything
+ * else, rather than treating a trailing suffix as a pre-release: '3.27.0dev'
+ * coerces to the same version as '3.27.0', so it compares equal to it, not
+ * less than it. Hyphenating the suffix into a real pre-release tag instead
+ * would count every in-progress dev sync as behind its own eventual
+ * release, which is noise for a check meant to flag a stale template, not
+ * an unreleased one.
+ *
+ * 'unknown' means the pipeline's own version cannot be read as a version at
+ * all (missing, or not version-shaped): there is nothing to compare, not a
+ * pipeline that is behind.
+ */
+function compareVersions(pipelineVersionRaw, latestVersionRaw) {
+    const pipelineVersion = pipelineVersionRaw.trim();
+    if (pipelineVersion === '') {
+        return { status: 'unknown', reason: "'nf-core-version' is not set." };
+    }
+    const pipeline = semverExports.coerce(pipelineVersion);
+    if (!pipeline) {
+        return {
+            status: 'unknown',
+            reason: `'${pipelineVersion}' is not a recognisable version.`
+        };
+    }
+    const latest = semverExports.coerce(latestVersionRaw);
+    if (!latest) {
+        throw new Error(`The latest nf-core/tools release tag '${latestVersionRaw}' is not a recognisable version.`);
+    }
+    if (!semverExports.lt(pipeline, latest)) {
+        return { status: 'up-to-date' };
+    }
+    return { status: 'behind', pipelineVersion: pipeline.version };
+}
+
+const DEFAULT_ARTIFACT_DIR = 'pr-comment';
+function readInputs() {
+    const prNumberRaw = getInput('pr-number', { required: true });
+    const prNumber = Number(prNumberRaw);
+    assertPositiveInteger(prNumber, "Input 'pr-number'");
+    return {
+        pipelineVersion: getInput('nf-core-version'),
+        prNumber,
+        token: getInput('github-token', { required: true }),
+        artifactDir: getInput('artifact-path') || DEFAULT_ARTIFACT_DIR
+    };
+}
+function writeSummary(pipelineVersion, latestVersion, comparison) {
+    summary.addHeading('template-version: comparison', 3).addTable([
+        [
+            { data: 'Setting', header: true },
+            { data: 'Value', header: true }
+        ],
+        // Both values are file-sourced (a contributor's own .nf-core.yml on a
+        // pull request) or an upstream release tag: escape before this table,
+        // which addTable() writes as raw, unescaped HTML. Trimmed first, so a
+        // whitespace-only value renders the same placeholder as an empty one
+        // (compareVersions() already treats them the same way).
+        ['Pipeline version', escapeHtml(pipelineVersion.trim() || '(not set)')],
+        ['Latest nf-core/tools release', escapeHtml(latestVersion)],
+        ['Result', comparison.status]
+    ]);
+    return writeSummaryBestEffort();
 }
 /**
- * Posts or updates a pull request comment from a `pr-comment` artifact an
- * unprivileged workflow produced. Every field read from that artifact is
- * untrusted: this validates the header and the pull request number, then
- * verifies the pull request number independently before using it, and
- * never runs anything from the artifact as code.
+ * Compares the pipeline's configured template version against the latest
+ * nf-core/tools release and writes the 'pr-comment' artifact: a comment
+ * only when the pipeline is behind, nothing beyond pr_number.txt and
+ * header.txt otherwise. Never posts anything itself; a separate, privileged
+ * workflow does that from the artifact this produces.
  */
 async function run() {
     const inputs = readInputs();
-    const raw = readArtifact(inputs.artifactPath);
-    if (!raw) {
-        info(`No pr-comment artifact at '${inputs.artifactPath}'. Nothing to post.`);
-        return;
+    const latestVersion = await fetchLatestToolsVersion(inputs.token);
+    const comparison = compareVersions(inputs.pipelineVersion, latestVersion);
+    // JSON-encoded: pipelineVersion is a contributor's own .nf-core.yml value
+    // on a pull request, so a value containing a newline can't inject a
+    // workflow command into the log (same reasoning as read-config's own
+    // resolved-value log line).
+    info(`nf-core-version: pipeline=${JSON.stringify(inputs.pipelineVersion)} latest=${JSON.stringify(latestVersion)} result=${comparison.status}`);
+    let comment;
+    let resolved;
+    if (comparison.status === 'behind') {
+        // comparison.pipelineVersion, not inputs.pipelineVersion: the coerced
+        // form is digits and dots only, so nothing a pull request wrote into
+        // .nf-core.yml beyond a version number can reach the posted comment.
+        comment = buildComment(comparison.pipelineVersion, latestVersion);
     }
-    const header = validateHeader(raw.headerRaw);
-    const prNumberClaim = validatePrNumber(raw.prNumberRaw);
-    const { bodyRaw, resolvedRaw } = raw;
-    // A blank comment.md (present but empty, for example a lint run a
-    // timeout killed after creating the file but before writing to it) means
-    // the same thing as an absent one: nothing to say. Posting it would
-    // otherwise overwrite a real earlier report with nothing.
-    //
-    // Neither a report nor a resolution: nothing to do, and (since there is
-    // nothing that could change an existing comment either way) nothing to
-    // check for one. Every producer that has never heard of resolved.md
-    // keeps exactly today's fast no-op, with no API call at all.
-    const commentAbsent = bodyRaw === undefined || bodyRaw.trim() === '';
-    const resolvedAbsent = resolvedRaw === undefined || resolvedRaw.trim() === '';
-    if (commentAbsent && resolvedAbsent) {
-        info(`comment.md is absent or blank, and so is resolved.md (header '${header}'). Nothing to say.`);
-        return;
+    else if (comparison.status === 'up-to-date') {
+        // Lets post-comment update away an earlier 'behind' comment left over
+        // from before this push. A no-op when there is no such comment: it
+        // never creates one from resolved.md.
+        resolved = buildResolvedComment(latestVersion);
     }
-    const octokit = getOctokit(inputs.token);
-    const { owner, repo } = context.repo;
-    const associated = await resolveAssociatedPrNumbers(octokit, owner, repo, inputs.headSha);
-    if (associated.length === 0) {
-        info(`Commit ${inputs.headSha} is not associated with any open or merged pull request. Nothing to post.`);
-        return;
+    else {
+        warning(`Could not compare the pipeline's template version against the latest nf-core/tools release. ${comparison.reason}`);
     }
-    if (!associated.includes(prNumberClaim)) {
-        throw new Error(`pr_number.txt claims pull request #${String(prNumberClaim)}, but commit ${inputs.headSha} is associated with pull request(s) ${associated.join(', ')}. Refusing to post to a pull request the triggering commit is not part of.`);
-    }
-    const selfLogin = await resolveAuthenticatedLogin(octokit);
-    const marker = buildMarker(header);
-    const existingId = await findExistingCommentId(octokit, owner, repo, prNumberClaim, marker, selfLogin);
-    // comment.md, whenever present, always wins over resolved.md.
-    if (bodyRaw !== undefined && bodyRaw.trim() !== '') {
-        const body = buildCommentBody(marker, sanitiseBody(bodyRaw));
-        if (existingId !== undefined) {
-            await octokit.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existingId,
-                body
-            });
-            info(`Updated comment ${String(existingId)} on pull request #${String(prNumberClaim)} (header '${header}').`);
-        }
-        else {
-            const created = await octokit.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: prNumberClaim,
-                body
-            });
-            info(`Created comment ${String(created.data.id)} on pull request #${String(prNumberClaim)} (header '${header}').`);
-        }
-        await writeOutcomeSummary(header, prNumberClaim, existingId !== undefined);
-        return;
-    }
-    // comment.md is absent or blank here, so the guard above guarantees
-    // resolved.md is not. It only ever updates an earlier comment, never
-    // creates one: with nothing posted yet, there is nothing to resolve.
-    if (existingId === undefined) {
-        info(`resolved.md is present but no earlier '${header}' comment exists. Nothing to update.`);
-        return;
-    }
-    if (resolvedRaw === undefined || resolvedRaw.trim() === '') {
-        return; // Unreachable: ruled out by the guard above.
-    }
-    const body = buildCommentBody(marker, sanitiseBody(resolvedRaw));
-    await octokit.rest.issues.updateComment({
-        owner,
-        repo,
-        comment_id: existingId,
-        body
-    });
-    info(`Updated comment ${String(existingId)} on pull request #${String(prNumberClaim)} (header '${header}') to its resolved text.`);
-    await writeOutcomeSummary(header, prNumberClaim, true);
+    writeArtifact(inputs.artifactDir, String(inputs.prNumber), comment, resolved);
+    await writeSummary(inputs.pipelineVersion, latestVersion, comparison);
 }
 
 runAction(run);

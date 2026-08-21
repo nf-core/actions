@@ -737,11 +737,12 @@ The `nf-core` job uploads an artifact named `pr-comment`,
 `if: always() && github.event_name == 'pull_request'`, for
 [`pr-comment.yml`](#the-pr-commentyml-workflow) to read:
 
-| File            | Contents                                                                                                                                                                      |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr_number.txt` | The pull request number, as plain text.                                                                                                                                       |
-| `header.txt`    | `lint`. Identifies which comment this artifact updates, so a later run replaces it instead of adding a second one.                                                            |
-| `comment.md`    | `nf-core pipelines lint`'s own Markdown report. **Absent** when the lint step never produced one (a failure before it ran). Its absence means "nothing to say", not an error. |
+| File            | Contents                                                                                                                                                                                                                     |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr_number.txt` | The pull request number, as plain text.                                                                                                                                                                                      |
+| `header.txt`    | `lint`. Identifies which comment this artifact updates, so a later run replaces it instead of adding a second one.                                                                                                           |
+| `comment.md`    | `nf-core pipelines lint`'s own Markdown report. **Absent** when the lint step never produced one (a failure before it ran). Its absence means "nothing to say", not an error.                                                |
+| `resolved.md`   | Optional; see [The `post-comment` action](#the-post-comment-action) below. This workflow never writes one, so an absent `comment.md` behaves exactly as before: nothing is posted, and any earlier comment is left standing. |
 
 This is the same three-file shape the previous, vendored `linting.yml` built for
 its own PR-comment step; `pr-comment.yml` can read it unchanged. `pre-commit`
@@ -871,6 +872,17 @@ deliberate choice, not an oversight. See also
 [What a posted comment does not prove](#what-a-posted-comment-does-not-prove)
 below.
 
+**The optional `resolved.md`.** A producer with nothing to report can still have
+something to withdraw: a pipeline that was behind and is now current has no
+lint-style report to post, but an earlier "you are behind" comment from a
+previous push is now wrong. `resolved.md`, read and sanitised exactly like
+`comment.md`, exists for that. It is used only when `comment.md` is itself
+absent or blank, and only ever to **update** an existing comment under this
+header to `resolved.md`'s own text; it never creates one. With no earlier
+comment to update, it is a no-op, the same as an absent `comment.md` on its own.
+A producer that never writes `resolved.md` — `linting.yml` always writes a body,
+so it never needs to — behaves exactly as if this file did not exist.
+
 **Order of checks.** The header and pull request number are validated as soon as
 the artifact is read, whether or not there is a comment to post; the
 commit/pull-request lookup above, which needs an API call, only runs once
@@ -938,6 +950,7 @@ on:
     workflows:
       - nf-core linting
       - nf-test
+      - nf-core template version comment
     types: [completed]
 
 permissions: {}
@@ -951,19 +964,19 @@ jobs:
 ```
 
 `workflows:` names the pipeline's own producer workflows by their `name:` field
-(`nf-core linting`, `nf-test`; see their own stubs above), not this repo's
-reusable workflow file names. Add to that list as the pipeline adopts more
-producers of the `pr-comment` artifact contract; a name that does not match a
-real workflow, for example a typo, simply never fires, silently, so double-check
-it against the producer's own `name:` line. `types: [completed]` is required:
-`workflow_run` defaults to firing on `requested`, `in_progress`, **and**
-`completed`, and only a `completed` run has an artifact to download.
+(`nf-core linting`, `nf-test`, `nf-core template version comment`; see their own
+stubs above and below), not this repo's reusable workflow file names. Add to
+that list as the pipeline adopts more producers of the `pr-comment` artifact
+contract; a name that does not match a real workflow, for example a typo, simply
+never fires, silently, so double-check it against the producer's own `name:`
+line. `types: [completed]` is required: `workflow_run` defaults to firing on
+`requested`, `in_progress`, **and** `completed`, and only a `completed` run has
+an artifact to download.
 
-The vendored workflow this replaces watched four producers. This stub lists two,
-`nf-core linting` and `nf-test`, because the other two do not exist here yet:
-`template-version-comment.yml` (stage 8) and `branch.yml` (stage 9) each add a
-name to this list once built. Add each one, in the pull request that adds the
-producer itself, as described above.
+The vendored workflow this replaces watched four producers. This stub lists
+three; the fourth, `branch.yml` (stage 9), does not exist here yet and adds its
+own name to this list once built. Add each one, in the pull request that adds
+the producer itself, as described above.
 
 The calling job grants `actions: read` and `pull-requests: write`, the same two
 permissions [`pr-comment.yml`](.github/workflows/pr-comment.yml)'s own job
@@ -1065,6 +1078,145 @@ group's breadth, since cancelling a run drops a report instead of posting it.
   the stub, as shown above.
 - **An oversized report now gets truncated and posted, instead of failing.** See
   [The body](#what-it-validates-and-why) above.
+
+## The `template-version` action
+
+The [`template-version`](actions/template-version) action compares the
+pipeline's configured nf-core/tools version against the latest nf-core/tools
+release, and writes a `pr-comment` artifact: a comment when the pipeline is
+behind, or a short resolved note when a pipeline that was behind has caught up.
+It never posts anything itself.
+
+```yaml
+- name: Compare template version
+  uses: nf-core/actions/actions/template-version@v1
+  with:
+    nf-core-version: ${{ steps.read-config.outputs.nf-core-version }}
+    pr-number: ${{ github.event.pull_request.number }}
+    github-token: ${{ github.token }}
+```
+
+| Input             | Required | Purpose                                                                                                                                              |
+| ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nf-core-version` | No       | The pipeline's configured nf-core/tools version. Pass [`read-config`](#the-ci-config-block)'s own `nf-core-version` output; do not re-read the file. |
+| `pr-number`       | Yes      | Pull request number, recorded in `pr_number.txt`.                                                                                                    |
+| `github-token`    | Yes      | Used to read nf-core/tools' latest release. See [The `github-token` input](#the-github-token-input) below.                                           |
+| `artifact-path`   | No       | Directory to write the artifact files into. Defaults to `pr-comment`, matching the workflow's own upload step.                                       |
+
+### Version comparison
+
+The comparison uses [`semver`](https://www.npmjs.com/package/semver), the
+dependency npm itself uses to parse versions, rather than a hand-rolled
+comparison. A plain string or numeric-split comparison gets `2.10` sorting
+before `2.9` wrong (`'1' < '9'` as characters); `semver`'s parsed
+major/minor/patch numbers do not. `semver`'s `coerce()` also accepts shapes a
+strict parser would reject: a two-component version such as `2.10`, and a
+development suffix with no separating hyphen such as `3.27.0dev` (not valid
+strict semver, which needs `3.27.0-dev`). `coerce()` extracts the leading
+`major.minor.patch` and drops everything else, so `3.27.0dev` compares equal to
+`3.27.0`, not less than it: treating the suffix as a real pre-release tag would
+count every in-progress dev sync as behind its own eventual release, which is
+noise for a check meant to flag a stale template, not an unreleased one.
+
+An empty or otherwise unparseable `nf-core-version` compares as `unknown`, not
+as `behind`: there is nothing to compare, so no comment is written, and the
+Actions log carries a warning naming why. The latest release's own tag is
+assumed already version-shaped, since it comes from a real GitHub release, not
+from pull-request-controlled text; a malformed tag there fails the action
+outright instead of silently comparing against nothing.
+
+### The `github-token` input
+
+`github-token` only needs to be a valid token, not one holding any particular
+scope: nf-core/tools is a public repository, so reading its release list needs
+no permission at all. Passing the ephemeral, per-job `GITHUB_TOKEN` raises the
+request above the unauthenticated rate limit; this action never uses it for
+anything else, and never needs a secret.
+
+### The `pr-comment` artifact
+
+| File            | Contents                                                                                                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr_number.txt` | The pull request number, as plain text.                                                                                                                                                                                                                                        |
+| `header.txt`    | `template-version`. Distinct from `linting.yml`'s `lint` header, so the two comments never collide.                                                                                                                                                                            |
+| `comment.md`    | Present only when the pipeline is behind the latest release. **Absent** means "up to date", not "unknown" or an error.                                                                                                                                                         |
+| `resolved.md`   | Present only when the pipeline is up to date. States that it now matches the latest release; see [The `post-comment` action](#the-post-comment-action). Lets `post-comment` update away an earlier "behind" comment, instead of leaving it standing once the version is fixed. |
+
+## The `template-version-comment.yml` workflow
+
+[`template-version-comment.yml`](.github/workflows/template-version-comment.yml)
+replaces a vendored workflow that read the pipeline's template version and
+reported it on the pull request. An earlier version of that vendored workflow
+was a private security advisory: it ran on `pull_request_target`, read a version
+the pull request itself controlled, and posted a comment with a bot token in the
+same job — a pull request could set `nf_core_version` to arbitrary text that
+then reached a privileged step. The vendored workflow this replaces already
+carries the fix, splitting the check from the posting; this stage centralises
+that fixed shape and rewrites the check itself in TypeScript.
+
+**This workflow is only the unprivileged half.** It triggers on `pull_request`,
+not `pull_request_target`; its one job holds `contents: read` and no secret; and
+no job in it holds any write permission at all. It produces a `pr-comment`
+artifact and nothing else — it never posts a comment, and never holds a
+credential that could. [`pr-comment.yml`](#the-pr-commentyml-workflow) posts it
+separately, from a completely different, privileged job that never runs pull
+request code.
+
+```yaml
+# .github/workflows/template-version-comment.yml in a pipeline repo
+name: nf-core template version comment
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  run:
+    permissions:
+      contents: read
+    uses: nf-core/actions/.github/workflows/template-version-comment.yml@v1
+```
+
+`run:` grants `contents: read`, the only permission the workflow's one job
+requests, needed to check out `.nf-core.yml`. No secret is passed: the ephemeral
+`GITHUB_TOKEN` used inside is forwarded automatically as `github.token`, not
+through a `secrets:` block.
+
+**Add this workflow's stub `name:` to the pipeline's `pr-comment.yml`
+`workflows:` list.** Without that, this workflow still runs and still produces
+the artifact, but nothing ever posts it: see
+[The `pr-comment.yml` workflow](#the-pr-commentyml-workflow).
+
+### `.nf-core.yml` keys
+
+One key, already read for other reusable workflows here: the pipeline's own
+`nf_core_version`, resolved by [`read-config`](#the-ci-config-block) as its
+`nf-core-version` output and passed straight through to the `template-version`
+action. Nothing new was added to `.nf-core.yml` for this workflow.
+
+### Migrating from the vendored workflow
+
+- **The comparison is now version-aware, not a plain string match.** The
+  vendored workflow's `[ "$PR_VERSION" != "$latest_version" ]` flags any
+  mismatch, including one where the pipeline is technically ahead; this workflow
+  only flags the pipeline being genuinely behind. See
+  [Version comparison](#version-comparison) above.
+- **`nichmor/minimal-read-yaml` and installing `nf-core` via `pip` are both
+  gone.** `nf_core_version` now comes from `read-config`, the same action every
+  other reusable workflow here uses, and the latest release comes from the
+  GitHub API directly, not from installing the package to ask it its own
+  version.
+- **The artifact contract is unchanged.** `pr_number.txt`, `header.txt`
+  (`template-version`) and an optional `comment.md` are the same three files the
+  vendored workflow already built; `pr-comment.yml`'s poster reads them
+  unchanged.
+- **Nothing here posts a comment any more.** The vendored workflow already only
+  produced an artifact too (it never ran `pull_request_target` or held a token
+  itself); this is a straight rewrite of that same shape, not a new security
+  split. A pipeline stub still pointing at an older, combined,
+  `pull_request_target` version of this check should migrate to the stub above
+  and drop any `secrets:` it passes: this workflow needs none.
 
 ## Tag policy
 

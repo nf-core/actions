@@ -41,7 +41,8 @@ describe('readArtifact', () => {
     expect(readArtifact(dir)).toEqual({
       prNumberRaw: '42\n',
       headerRaw: 'lint\n',
-      bodyRaw: '## Report\n\nAll good.\n'
+      bodyRaw: '## Report\n\nAll good.\n',
+      resolvedRaw: undefined
     })
   })
 
@@ -52,7 +53,21 @@ describe('readArtifact', () => {
     expect(readArtifact(dir)).toEqual({
       prNumberRaw: '42\n',
       headerRaw: 'lint\n',
-      bodyRaw: undefined
+      bodyRaw: undefined,
+      resolvedRaw: undefined
+    })
+  })
+
+  it('reads resolvedRaw when resolved.md is present', () => {
+    writeFileSync(join(dir, 'pr_number.txt'), '42\n')
+    writeFileSync(join(dir, 'header.txt'), 'lint\n')
+    writeFileSync(join(dir, 'resolved.md'), 'Now up to date.\n')
+
+    expect(readArtifact(dir)).toEqual({
+      prNumberRaw: '42\n',
+      headerRaw: 'lint\n',
+      bodyRaw: undefined,
+      resolvedRaw: 'Now up to date.\n'
     })
   })
 
@@ -90,6 +105,16 @@ describe('readArtifact', () => {
     expect(() => readArtifact(dir)).toThrow(/a symlink/)
   })
 
+  it('rejects a symlink standing in for resolved.md', () => {
+    const secret = join(dir, 'secret.txt')
+    writeFileSync(secret, 'not part of the pr-comment contract')
+    writeFileSync(join(dir, 'pr_number.txt'), '42\n')
+    writeFileSync(join(dir, 'header.txt'), 'lint\n')
+    symlinkSync(secret, join(dir, 'resolved.md'))
+
+    expect(() => readArtifact(dir)).toThrow(/a symlink/)
+  })
+
   it('rejects an oversized header.txt before reading it into memory', () => {
     writeFileSync(join(dir, 'pr_number.txt'), '42\n')
     writeFileSync(join(dir, 'header.txt'), 'a'.repeat(5000))
@@ -101,6 +126,14 @@ describe('readArtifact', () => {
     writeFileSync(join(dir, 'pr_number.txt'), '42\n')
     writeFileSync(join(dir, 'header.txt'), 'lint\n')
     writeFileSync(join(dir, 'comment.md'), 'x'.repeat(2 * 1024 * 1024))
+
+    expect(() => readArtifact(dir)).toThrow(/byte cap/)
+  })
+
+  it('rejects an oversized resolved.md', () => {
+    writeFileSync(join(dir, 'pr_number.txt'), '42\n')
+    writeFileSync(join(dir, 'header.txt'), 'lint\n')
+    writeFileSync(join(dir, 'resolved.md'), 'x'.repeat(2 * 1024 * 1024))
 
     expect(() => readArtifact(dir)).toThrow(/byte cap/)
   })

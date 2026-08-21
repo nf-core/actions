@@ -370,6 +370,88 @@ describe('post-comment run()', () => {
     expect(updateComment).not.toHaveBeenCalled()
   })
 
+  describe('resolved.md', () => {
+    it('updates an existing comment to resolved.md when comment.md is absent', async () => {
+      listComments.mockResolvedValue({
+        data: [
+          {
+            id: 99,
+            user: { login: 'github-actions[bot]' },
+            body: '<!-- nf-core-actions:pr-comment:lint -->\nWas behind.'
+          }
+        ]
+      })
+      writeArtifact({
+        'pr_number.txt': '42\n',
+        'header.txt': 'lint\n',
+        'resolved.md': 'Now up to date.\n'
+      })
+      setInputs({ 'artifact-path': dir })
+
+      await run()
+
+      expect(updateComment).toHaveBeenCalledTimes(1)
+      expect(createComment).not.toHaveBeenCalled()
+      const call = updateComment.mock.calls[0]?.[0] as {
+        comment_id: number
+        body: string
+      }
+      expect(call.comment_id).toBe(99)
+      expect(call.body).toContain('Now up to date.')
+    })
+
+    it('never creates a comment from resolved.md when none exists yet', async () => {
+      writeArtifact({
+        'pr_number.txt': '42\n',
+        'header.txt': 'lint\n',
+        'resolved.md': 'Now up to date.\n'
+      })
+      setInputs({ 'artifact-path': dir })
+
+      await expect(run()).resolves.toBeUndefined()
+
+      expect(createComment).not.toHaveBeenCalled()
+      expect(updateComment).not.toHaveBeenCalled()
+    })
+
+    it('is still a clean no-op when both comment.md and resolved.md are absent', async () => {
+      writeArtifact({ 'pr_number.txt': '42\n', 'header.txt': 'lint\n' })
+      setInputs({ 'artifact-path': dir })
+
+      await expect(run()).resolves.toBeUndefined()
+
+      expect(listPullRequestsAssociatedWithCommit).not.toHaveBeenCalled()
+      expect(createComment).not.toHaveBeenCalled()
+      expect(updateComment).not.toHaveBeenCalled()
+    })
+
+    it('lets a present comment.md win over resolved.md', async () => {
+      listComments.mockResolvedValue({
+        data: [
+          {
+            id: 99,
+            user: { login: 'github-actions[bot]' },
+            body: '<!-- nf-core-actions:pr-comment:lint -->\nWas behind.'
+          }
+        ]
+      })
+      writeArtifact({
+        'pr_number.txt': '42\n',
+        'header.txt': 'lint\n',
+        'comment.md': 'Still behind, newer report.\n',
+        'resolved.md': 'Now up to date.\n'
+      })
+      setInputs({ 'artifact-path': dir })
+
+      await run()
+
+      expect(updateComment).toHaveBeenCalledTimes(1)
+      const call = updateComment.mock.calls[0]?.[0] as { body: string }
+      expect(call.body).toContain('Still behind, newer report.')
+      expect(call.body).not.toContain('Now up to date.')
+    })
+  })
+
   it('sanitises the body before posting: mentions and image embeds are neutralised', async () => {
     writeArtifact({
       'pr_number.txt': '42\n',

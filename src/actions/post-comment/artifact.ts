@@ -13,6 +13,11 @@ export interface RawArtifact {
   headerRaw: string
   /** undefined when comment.md is absent: 'nothing to say', not an error. */
   bodyRaw: string | undefined
+  /**
+   * undefined when resolved.md is absent. Read and size-capped exactly like
+   * comment.md; run.ts decides what an absent one means.
+   */
+  resolvedRaw: string | undefined
 }
 
 // pr_number.txt and header.txt are a short id and a short slug; 4 KiB is
@@ -54,7 +59,7 @@ function readOptional(path: string, maxBytes: number): string | undefined {
 }
 
 /**
- * Reads pr_number.txt, header.txt and comment.md from `dir`.
+ * Reads pr_number.txt, header.txt, comment.md and resolved.md from `dir`.
  *
  * Returns undefined when pr_number.txt itself is absent. This is the
  * normal case, not an error: the whole artifact is missing whenever the
@@ -84,6 +89,7 @@ export function readArtifact(dir: string): RawArtifact | undefined {
   return {
     prNumberRaw,
     headerRaw,
-    bodyRaw: readOptional(join(dir, 'comment.md'), MAX_COMMENT_MD_BYTES)
+    bodyRaw: readOptional(join(dir, 'comment.md'), MAX_COMMENT_MD_BYTES),
+    resolvedRaw: readOptional(join(dir, 'resolved.md'), MAX_COMMENT_MD_BYTES)
   }
 }

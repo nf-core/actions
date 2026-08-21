@@ -48,7 +48,7 @@ simplification and correctness before the next stage starts.
 | 5   | `fix-linting.yml` workflow                  | Hardened three-job design: gate on commenter, run the fixer unprivileged, validate and push the patch in a separate job. Includes the patch validation action.                   | Done        |
 | 6   | `linting.yml` workflow                      | nf-core lint, prettier, editorconfig, plus the Nextflow lint check.                                                                                                              | Done        |
 | 7   | `pr-comment.yml` workflow                   | Posts and updates comments from artifacts produced by unprivileged workflows.                                                                                                    | Done        |
-| 8   | `template-version-comment.yml` workflow     | Compares the pipeline's template version against the current release and reports it on the pull request.                                                                         | Not started |
+| 8   | `template-version-comment.yml` workflow     | Compares the pipeline's template version against the current release and reports it on the pull request.                                                                         | Done        |
 | 9   | `branch.yml` + `clean-up.yml` workflows     | Branch protection check for release pull requests; stale issue and pull request handling.                                                                                        | Not started |
 | 10  | `download_pipeline.yml` workflow            | Tests `nf-core pipelines download` against the pipeline, including the stub run.                                                                                                 | Not started |
 | 11  | `awstest.yml` + `awsfulltest.yml` workflows | Launches small and full tests on Seqera Platform. Adds the reviewer permission check the security review requires.                                                               | Not started |
@@ -98,8 +98,14 @@ workflows above are proven. Revisit after stage 12.
   pipeline has, and no pipeline has needed a different one since. Add
   `ci.nextflow_lint_exclude` (a string-list, the same shape as `profiles`) if
   one genuinely does.
-- `pr-comment.yml` (stage 7)'s example stub lists two producer workflows,
-  `nf-core linting` and `nf-test`. The vendored workflow it replaces watched
-  four; the other two are `template-version-comment.yml` (stage 8) and
-  `branch.yml` (stage 9). Add each one to the example's `workflows:` list as its
-  own stage adds it.
+- `pr-comment.yml` (stage 7)'s example stub now lists three producer workflows,
+  `nf-core linting`, `nf-test` and `nf-core template version comment` (stage 8).
+  The vendored workflow it replaces watched four; the remaining one,
+  `branch.yml` (stage 9), adds its own name to the example's `workflows:` list
+  once built.
+- `template-version` (stage 8) writes its own half of the `pr-comment` artifact
+  in `src/actions/template-version/artifact.ts`, byte-for-byte the same shape
+  `post-comment`'s `artifact.ts` reads. `branch.yml` (stage 9) is the second
+  producer that will need this; move it to `src/lib/` then, not before, per this
+  file's own convention of moving shared code at the point a second user needs
+  it.
