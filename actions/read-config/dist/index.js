@@ -33,7 +33,7 @@ import require$$5$3 from 'string_decoder';
 import 'child_process';
 import 'timers';
 import { readFileSync } from 'node:fs';
-import { isAbsolute, resolve, relative } from 'node:path';
+import { isAbsolute, resolve, relative, sep } from 'node:path';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -35692,6 +35692,16 @@ const SETTINGS = [
         hasInput: true
     }),
     defineSetting({
+        output: 'nextflow-lint',
+        configPath: 'ci.nextflow_lint',
+        kind: 'boolean',
+        // Opt-in: 'nextflow lint' was never part of the pipeline template, so a
+        // pipeline that adopts 'linting.yml' must not gain a new failing check
+        // by default. See README.md for how a pipeline opts in.
+        default: false,
+        hasInput: true
+    }),
+    defineSetting({
         output: 'nf-core-version',
         configPath: 'nf_core_version',
         kind: 'string',
@@ -35730,6 +35740,8 @@ function kindLabel(kind) {
         return 'a string';
     if (kind === 'string-list')
         return 'a list of strings';
+    if (kind === 'boolean')
+        return 'a boolean';
     return 'a number';
 }
 function matchesKind(kind, value) {
@@ -35738,6 +35750,8 @@ function matchesKind(kind, value) {
     if (kind === 'string-list') {
         return (Array.isArray(value) && value.every((item) => typeof item === 'string'));
     }
+    if (kind === 'boolean')
+        return typeof value === 'boolean';
     return typeof value === 'number';
 }
 /**
@@ -35879,7 +35893,11 @@ function warnUnknownCiKeys(config) {
     }
     const unknown = Object.keys(ci).filter((key) => !KNOWN_CI_KEYS.includes(key));
     if (unknown.length > 0) {
-        warning(`Unknown key(s) under 'ci:' in .nf-core.yml, ignored: ${unknown.join(', ')}`);
+        // Key names come from the pipeline's .nf-core.yml, a contributor's file
+        // on a pull request: JSON-encode them so a key containing a newline
+        // can't inject a workflow command into the log (same reasoning as
+        // run.ts's resolved-value log line).
+        warning(`Unknown key(s) under 'ci:' in .nf-core.yml, ignored: ${JSON.stringify(unknown)}`);
     }
 }
 
@@ -35895,7 +35913,12 @@ function resolveConfigPath(workspace, configFileInput) {
     }
     const configPath = resolve(workspace, configFileInput);
     const relPath = relative(workspace, configPath);
-    if (relPath.startsWith('..') || isAbsolute(relPath)) {
+    // relPath.startsWith('..') would also reject a legitimate file whose name
+    // happens to start with two dots (for example '..nf-core.yml'): compare
+    // against '..' exactly, or '..' followed by a path separator, not a prefix.
+    if (relPath === '..' ||
+        relPath.startsWith(`..${sep}`) ||
+        isAbsolute(relPath)) {
         throw new Error(`config-file must stay inside the workspace. '${configFileInput}' resolves outside it.`);
     }
     return configPath;
@@ -35929,7 +35952,12 @@ function loadConfig(configPath) {
 function logAndWriteSummary(rows) {
     info('Resolved CI settings:');
     for (const row of rows) {
-        info(`  ${row.setting} = ${row.value} (${row.source})`);
+        // A file-sourced value is a contributor's own .nf-core.yml on a pull
+        // request: JSON-encode it so a value containing a newline can't inject
+        // a workflow command into the log (same reasoning as run-nf-test.ts,
+        // plan-run and validate-patch). The summary table below is escaped for
+        // HTML separately; this is the log path, which needs its own encoding.
+        info(`  ${row.setting} = ${JSON.stringify(row.raw)} (${row.source})`);
     }
     summary.addHeading('read-config: resolved settings', 3).addTable([
         [
@@ -35961,6 +35989,7 @@ async function run() {
         return {
             setting: setting.output,
             value: encodeOutput(resolved.value),
+            raw: resolved.value,
             source: resolved.source
         };
     });

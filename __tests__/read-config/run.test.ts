@@ -219,6 +219,39 @@ describe('run', () => {
     expect(outputValues()['runner']).toBe('gpu-runner')
   })
 
+  it('encodes a value containing a newline and a workflow command before logging it', async () => {
+    writeFileSync(
+      join(workDir, '.nf-core.yml'),
+      ['ci:', '  runner: "abc\\n::error::pwned"'].join('\n')
+    )
+    await run()
+
+    const logLine = info.mock.calls
+      .map((call) => call[0] as string)
+      .find((line) => line.includes('runner ='))
+    expect(logLine).toBeDefined()
+    // JSON.stringify renders the embedded newline as the two characters
+    // '\' 'n', not an actual line break, so the log line stays one line and
+    // no line inside it can start with '::' and be read as a workflow
+    // command.
+    expect(logLine).not.toContain('\n')
+    for (const line of logLine!.split('\n')) {
+      expect(line.trim().startsWith('::')).toBe(false)
+    }
+  })
+
+  it('accepts a config-file name that starts with two dots but is not an escape', async () => {
+    writeFileSync(
+      join(workDir, '..nf-core.yml'),
+      ['ci:', '  runner: dotted-runner'].join('\n')
+    )
+    getInput.mockImplementation((name) =>
+      name === 'config-file' ? '..nf-core.yml' : ''
+    )
+    await run()
+    expect(outputValues()['runner']).toBe('dotted-runner')
+  })
+
   it('escapes a value from .nf-core.yml in the summary table', async () => {
     writeFileSync(
       join(workDir, '.nf-core.yml'),

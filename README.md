@@ -93,6 +93,7 @@ ci:
   max_shards: 12
   nf_test_workdir: '~'
   runner: '8cpu-linux-x64'
+  nextflow_lint: true
 ```
 
 Omitting a key under `ci:` is normal. It means the pipeline follows the central
@@ -105,9 +106,10 @@ Each setting follows the same three-step order as
 first, then the value at that setting's path under `ci:`, then the built-in
 default.
 
-A setting whose value is a list or a number is available on the input side and
-the output side as JSON, for example `'["docker","singularity"]'` or `'12'`, so
-a calling workflow can use `fromJSON()` to build a matrix.
+A setting whose value is a list, a number, or a boolean is available on the
+input side and the output side as JSON, for example
+`'["docker","singularity"]'`, `'12'`, or `'true'`, so a calling workflow can use
+`fromJSON()` to build a matrix or gate an `if:` condition.
 
 `read-config` also exposes `nf-core-version`, `repository-type`, and
 `pipeline-name`, read from the pipeline's existing schema outside `ci:`. These
@@ -650,6 +652,138 @@ mid-push, which could otherwise fail with a non-fast-forward push.
 - **No custom `.pre-commit-config.yaml` handling changed.** `prepare-fix` runs
   `prek` the same way the vendored workflow ran it; a pipeline's own hook
   configuration needs no change.
+
+## The `linting.yml` workflow
+
+[`linting.yml`](.github/workflows/linting.yml) replaces a pipeline's own
+`linting.yml` (`prek` and `nf-core pipelines lint`) and, for a pipeline that
+carries one, its separate `nextflow-lint.yml` (the Nextflow strict-syntax
+check). All three checks are jobs in this one reusable workflow.
+
+```yaml
+# .github/workflows/linting.yml in a pipeline repo
+name: nf-core linting
+
+on:
+  pull_request:
+  push:
+    branches: [master, main, dev]
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  run:
+    permissions:
+      contents: read
+    uses: nf-core/actions/.github/workflows/linting.yml@v1
+```
+
+`run:` grants `contents: read`, the most every job inside `linting.yml`
+requests. No job here needs a secret, so the stub passes none: not even
+`secrets: inherit`.
+
+### Jobs
+
+- **`config`** resolves `nextflow-versions`, `nf-core-version` and
+  `nextflow-lint` from `.nf-core.yml` once, for the jobs below. Not required in
+  branch protection.
+- **`pre-commit`** runs the pipeline's own `prek` hooks (formatting,
+  `editorconfig-checker`, and whatever else `.pre-commit-config.yaml` lists).
+  Not required in branch protection.
+- **`nf-core`** runs `nf-core pipelines lint`, `--release` on a pull request
+  into `master` or `main`. It writes the `pr-comment` artifact described below.
+  Not required in branch protection.
+- **`nextflow-lint`** runs `nextflow lint`, Nextflow's own strict-syntax
+  checker, over every script and config file. Opt-in; see below. Not required in
+  branch protection.
+- **`confirm-pass`** reports the combined result of every job above and always
+  runs. **This is the check to put in branch protection**, not any job above:
+  GitHub treats a required check that reports `skipped` as satisfied, and each
+  job above can report `skipped`, either by design (its own `if:`, or
+  `nextflow-lint` being off) or because `config` failed and every job that
+  `needs` it was skipped as a result. Requiring one of those jobs directly would
+  let a broken `.nf-core.yml` bypass linting entirely.
+
+Each job gates on `github.event_name` so the merged trigger set still runs each
+check only when it ran before: `pre-commit` and `nf-core` skip `push`;
+`nextflow-lint` skips `release`.
+
+**`nextflow-lint` is opt-in.** It was never part of the pipeline template — only
+rnaseq ran it, from its own `nextflow-lint.yml` — so adopting `linting.yml` does
+not turn it on by default. Set `ci.nextflow_lint: true` in `.nf-core.yml` to
+enable it; see [The `ci:` config block](#the-ci-config-block). Run
+`nextflow lint -o concise .` locally first: a pipeline whose scripts or config
+files are not yet strict-syntax clean gets a new failing check the moment it
+enables this setting.
+
+### `.nf-core.yml` keys
+
+One new key: `ci.nextflow_lint` (boolean, default `false`) turns the
+`nextflow-lint` job on. `nextflow-versions` (`ci.nextflow_versions`) and
+`nf-core-version` (the pipeline's existing `nf_core_version` key) are the same
+settings [`nf-test.yml`](#the-nf-testyml-workflow) already reads; see
+[The `ci:` config block](#the-ci-config-block). `nextflow lint`'s own default
+exclude list (`.git`, `.nf-test`, `nf-test.config`, `work`, and a few others)
+already covers every generated or tool directory a pipeline has; no pipeline has
+needed a different list, so there is no `ci:` setting for it. Add one, the same
+way `profiles` or `max-shards` were added, only once a pipeline genuinely needs
+to exclude something else.
+
+### The `pr-comment` artifact
+
+The `nf-core` job uploads an artifact named `pr-comment`,
+`if: always() && github.event_name == 'pull_request'`, for stage 7's
+`pr-comment.yml` poster to read:
+
+| File            | Contents                                                                                                                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr_number.txt` | The pull request number, as plain text.                                                                                                                                       |
+| `header.txt`    | `lint`. Identifies which comment this artifact updates, so a later run replaces it instead of adding a second one.                                                            |
+| `comment.md`    | `nf-core pipelines lint`'s own Markdown report. **Absent** when the lint step never produced one (a failure before it ran). Its absence means "nothing to say", not an error. |
+
+This is the same three-file shape the previous, vendored `linting.yml` built for
+its own PR-comment step; `pr-comment.yml` can read it unchanged. `pre-commit`
+and `nextflow-lint` do not build one: neither did before, and a failing check
+already shows its own output in the Actions log. The `nf-core` job also runs on
+`release`, which has no pull request to comment on; gating on
+`github.event_name == 'pull_request'` keeps a release run from uploading an
+artifact with a blank `pr_number.txt`.
+
+**For stage 7: the artifact may be entirely absent, and that is normal, not an
+error.** A `release` run never uploads it, by the gate above. A job timeout or a
+cancelled run skips `if: always()` steps too, the same as any other step, so
+`pr-comment.yml` must treat a missing artifact the same way it treats a missing
+`comment.md`: nothing to post.
+
+### Migrating from a pipeline's own `linting.yml` and `nextflow-lint.yml`
+
+- **Check names**: keep the stub's `name:` as `nf-core linting` and the
+  `pre-commit` and `nf-core` checks keep their names. Two new checks appear,
+  `config` and `confirm-pass`; neither is required except `confirm-pass` itself,
+  which replaces whatever checks branch protection required before (see
+  [Jobs](#jobs) above).
+- **A pipeline that had `nextflow-lint.yml` sets `ci.nextflow_lint: true`.** The
+  job is opt-in and defaults to off (see [Jobs](#jobs) above), so carrying it
+  forward needs this key in `.nf-core.yml`. `Nextflow strict syntax lint / lint`
+  is gone; the same check reappears as `nf-core linting / nextflow-lint`. Update
+  branch protection to the new name (or to `confirm-pass`, see above), and
+  delete `nextflow-lint.yml` and its stub. Run `nextflow lint -o concise .`
+  locally before enabling the setting, to see what it would flag.
+- **The stub gains a `push` trigger.** Add it even if the pipeline never had
+  `nextflow-lint.yml`: `nextflow-lint` only runs on `pull_request` and `push`,
+  the same events its standalone workflow used. It still needs
+  `ci.nextflow_lint: true` to actually run.
+- **The `pietrobolcato/action-read-yaml` step is gone.** `nf-core-version` now
+  comes from `read-config`, the same action every other reusable workflow here
+  uses, instead of a separate third-party action.
+- **`GITHUB_COMMENTS_URL` is gone.** Nothing in `nf-core pipelines lint` reads
+  it; it was already inert.
+- **The release-branch condition is fixed.** Some pipelines carried
+  `github.base_ref != 'master' || github.base_ref != 'main'` (always true, an
+  `&&`/`||` mix-up), which ran the non-release lint even on a release pull
+  request, alongside the release lint. This workflow uses the correct `&&`.
 
 ## Tag policy
 

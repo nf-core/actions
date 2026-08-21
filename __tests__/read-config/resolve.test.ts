@@ -33,6 +33,7 @@ function settingByOutput(output: string): SettingDef {
 const stringSetting = settingByOutput('nf-test-version')
 const listSetting = settingByOutput('profiles')
 const numberSetting = settingByOutput('max-shards')
+const booleanSetting = settingByOutput('nextflow-lint')
 const readOnlySetting = settingByOutput('pipeline-name')
 const nfCoreVersionSetting = settingByOutput('nf-core-version')
 const runnerSetting = settingByOutput('runner')
@@ -164,6 +165,37 @@ describe('value kinds', () => {
     expect(() =>
       resolveSetting(listSetting, { ci: { profiles: 'docker' } })
     ).toThrow(/ci\.profiles/)
+  })
+
+  it('parses a boolean from YAML', () => {
+    const result = resolveSetting(booleanSetting, {
+      ci: { nextflow_lint: true }
+    })
+    expect(result).toEqual({ value: true, source: 'file' })
+  })
+
+  it('defaults a boolean setting to false when unset', () => {
+    const result = resolveSetting(booleanSetting, {})
+    expect(result).toEqual({ value: false, source: 'default' })
+  })
+
+  it('parses a boolean input as JSON', () => {
+    getInput.mockReturnValue('true')
+    const result = resolveSetting(booleanSetting, undefined)
+    expect(result).toEqual({ value: true, source: 'input' })
+  })
+
+  it('rejects a non-boolean config value, naming the setting and the kind', () => {
+    expect(() =>
+      resolveSetting(booleanSetting, { ci: { nextflow_lint: 'yes' } })
+    ).toThrow(/ci\.nextflow_lint.*a boolean.*yes/s)
+  })
+
+  it('rejects a non-boolean input', () => {
+    getInput.mockReturnValue('"yes"')
+    expect(() => resolveSetting(booleanSetting, undefined)).toThrow(
+      /nextflow-lint.*a boolean/s
+    )
   })
 })
 

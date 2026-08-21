@@ -46,7 +46,7 @@ simplification and correctness before the next stage starts.
 | 3   | `nf-test` action                            | Runs one nf-test shard and parses TAP into a job summary. Tool setup stays in the stage-4 workflow.                                                                              | Done        |
 | 4   | `nf-test.yml` workflow                      | Reusable workflow: shard discovery, test matrix, pass confirmation, failure reporting. Covers the ARM and GPU variants through config, not separate files.                       | Done        |
 | 5   | `fix-linting.yml` workflow                  | Hardened three-job design: gate on commenter, run the fixer unprivileged, validate and push the patch in a separate job. Includes the patch validation action.                   | Done        |
-| 6   | `linting.yml` workflow                      | nf-core lint, prettier, editorconfig, plus the Nextflow lint check.                                                                                                              | Not started |
+| 6   | `linting.yml` workflow                      | nf-core lint, prettier, editorconfig, plus the Nextflow lint check.                                                                                                              | Done        |
 | 7   | `pr-comment.yml` workflow                   | Posts and updates comments from artifacts produced by unprivileged workflows.                                                                                                    | Not started |
 | 8   | `template-version-comment.yml` workflow     | Compares the pipeline's template version against the current release and reports it on the pull request.                                                                         | Not started |
 | 9   | `branch.yml` + `clean-up.yml` workflows     | Branch protection check for release pull requests; stale issue and pull request handling.                                                                                        | Not started |
@@ -87,3 +87,13 @@ workflows above are proven. Revisit after stage 12.
   README.md's "Sentieon secret exposure" section, but whether to restrict it
   further (for example gating on a reviewer approval, as stage 11's
   awstest/awsfulltest reviewer check will do) is still open.
+- `linting.yml` (stage 6)'s `nextflow-lint` job is opt-in through
+  `ci.nextflow_lint` in `.nf-core.yml` (default `false`), fixed after review so
+  adopting `@v1` cannot hand a pipeline a new failing check. rnaseq should set
+  `ci.nextflow_lint: true`, since it already runs this check today from its own
+  `nextflow-lint.yml`.
+- `linting.yml` (stage 6) has no `ci:` setting for `nextflow lint`'s `-exclude`
+  flag: its own default list already covers every generated or tool directory a
+  pipeline has, and no pipeline has needed a different one since. Add
+  `ci.nextflow_lint_exclude` (a string-list, the same shape as `profiles`) if
+  one genuinely does.

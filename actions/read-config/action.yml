@@ -7,8 +7,8 @@ author: nf-core
 inputs:
   config-file:
     description: >-
-      Path to the pipeline's config file, relative to the workspace unless
-      absolute.
+      Path to the pipeline's config file, relative to the workspace. An absolute
+      path is rejected.
     required: false
     default: .nf-core.yml
   nf-test-version:
@@ -43,6 +43,12 @@ inputs:
       GitHub Actions runner label to test on. Overrides 'ci.runner' in
       .nf-core.yml and the built-in default.
     required: false
+  nextflow-lint:
+    description: >-
+      Whether to run the Nextflow strict-syntax lint, as 'true' or 'false'.
+      Overrides 'ci.nextflow_lint' in .nf-core.yml and the built-in default
+      (false).
+    required: false
 
 outputs:
   nf-test-version:
@@ -63,6 +69,10 @@ outputs:
     description: Resolved nf-test working directory, as a plain string.
   runner:
     description: Resolved runner label, as a plain string.
+  nextflow-lint:
+    description: >-
+      Whether to run the Nextflow strict-syntax lint, as a JSON boolean. Use
+      fromJSON() in an 'if:' condition.
   nf-core-version:
     description: >-
       nf-core template version from 'nf_core_version' in .nf-core.yml, as a

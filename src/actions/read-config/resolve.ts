@@ -4,7 +4,7 @@ import { assertPositiveInteger } from '../../lib/positive-integer.js'
 import { type SettingDef, type ValueKind, KNOWN_CI_KEYS } from './registry.js'
 
 export type Source = 'input' | 'file' | 'default'
-export type SettingValue = string | string[] | number
+export type SettingValue = string | string[] | number | boolean
 
 export interface Resolved {
   value: SettingValue
@@ -14,6 +14,7 @@ export interface Resolved {
 function kindLabel(kind: ValueKind): string {
   if (kind === 'string') return 'a string'
   if (kind === 'string-list') return 'a list of strings'
+  if (kind === 'boolean') return 'a boolean'
   return 'a number'
 }
 
@@ -24,6 +25,7 @@ function matchesKind(kind: ValueKind, value: unknown): boolean {
       Array.isArray(value) && value.every((item) => typeof item === 'string')
     )
   }
+  if (kind === 'boolean') return typeof value === 'boolean'
   return typeof value === 'number'
 }
 
@@ -225,8 +227,12 @@ export function warnUnknownCiKeys(config: unknown): void {
     (key) => !KNOWN_CI_KEYS.includes(key)
   )
   if (unknown.length > 0) {
+    // Key names come from the pipeline's .nf-core.yml, a contributor's file
+    // on a pull request: JSON-encode them so a key containing a newline
+    // can't inject a workflow command into the log (same reasoning as
+    // run.ts's resolved-value log line).
     core.warning(
-      `Unknown key(s) under 'ci:' in .nf-core.yml, ignored: ${unknown.join(', ')}`
+      `Unknown key(s) under 'ci:' in .nf-core.yml, ignored: ${JSON.stringify(unknown)}`
     )
   }
 }

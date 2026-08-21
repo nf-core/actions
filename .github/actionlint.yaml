@@ -21,3 +21,8 @@ paths:
       # Same '$/' gap as above, for this workflow's own sibling actions.
       - 'specifying action "\$/actions/(read-config|validate-patch)" in invalid
         format because ref is missing'
+  .github/workflows/linting.yml:
+    ignore:
+      # Same '$/' gap as above, for this workflow's own sibling action.
+      - 'specifying action "\$/actions/read-config" in invalid format because
+        ref is missing'

@@ -2,13 +2,15 @@
 // row here: action.yml, defaults and the resolver all read from this list.
 // The drift test in __tests__/read-config checks action.yml against it.
 
-export type ValueKind = 'string' | 'string-list' | 'number'
+export type ValueKind = 'string' | 'string-list' | 'number' | 'boolean'
 
 export type ValueForKind<K extends ValueKind> = K extends 'string'
   ? string
   : K extends 'string-list'
     ? string[]
-    : number
+    : K extends 'boolean'
+      ? boolean
+      : number
 
 export interface SettingDef<K extends ValueKind = ValueKind> {
   /** Name of the action output. Also the action input name, when hasInput is true. */
@@ -81,6 +83,16 @@ export const SETTINGS: readonly SettingDef[] = [
     configPath: 'ci.runner',
     kind: 'string',
     default: '4cpu-linux-x64',
+    hasInput: true
+  }),
+  defineSetting({
+    output: 'nextflow-lint',
+    configPath: 'ci.nextflow_lint',
+    kind: 'boolean',
+    // Opt-in: 'nextflow lint' was never part of the pipeline template, so a
+    // pipeline that adopts 'linting.yml' must not gain a new failing check
+    // by default. See README.md for how a pipeline opts in.
+    default: false,
     hasInput: true
   }),
   defineSetting({

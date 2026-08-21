@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { isAbsolute, relative, resolve, sep } from 'node:path'
 import * as core from '@actions/core'
 import { type Document, parseDocument } from 'yaml'
 import { encodeOutput } from '../../lib/encode-output.js'
@@ -7,11 +7,19 @@ import { escapeHtml } from '../../lib/escape-html.js'
 import { isEnoent } from '../../lib/is-enoent.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
 import { DEFAULT_CONFIG_FILE, SETTINGS } from './registry.js'
-import { resolveSetting, warnUnknownCiKeys, type Source } from './resolve.js'
+import {
+  resolveSetting,
+  warnUnknownCiKeys,
+  type SettingValue,
+  type Source
+} from './resolve.js'
 
 interface Row {
   setting: string
+  /** Resolved value, exactly as it will be encoded for setOutput(). */
   value: string
+  /** Same value, before output-encoding. Only used for the log line below. */
+  raw: SettingValue
   source: Source
 }
 
@@ -30,7 +38,14 @@ function resolveConfigPath(workspace: string, configFileInput: string): string {
 
   const configPath = resolve(workspace, configFileInput)
   const relPath = relative(workspace, configPath)
-  if (relPath.startsWith('..') || isAbsolute(relPath)) {
+  // relPath.startsWith('..') would also reject a legitimate file whose name
+  // happens to start with two dots (for example '..nf-core.yml'): compare
+  // against '..' exactly, or '..' followed by a path separator, not a prefix.
+  if (
+    relPath === '..' ||
+    relPath.startsWith(`..${sep}`) ||
+    isAbsolute(relPath)
+  ) {
     throw new Error(
       `config-file must stay inside the workspace. '${configFileInput}' resolves outside it.`
     )
@@ -73,7 +88,12 @@ function loadConfig(configPath: string): Document | undefined {
 function logAndWriteSummary(rows: Row[]): Promise<void> {
   core.info('Resolved CI settings:')
   for (const row of rows) {
-    core.info(`  ${row.setting} = ${row.value} (${row.source})`)
+    // A file-sourced value is a contributor's own .nf-core.yml on a pull
+    // request: JSON-encode it so a value containing a newline can't inject
+    // a workflow command into the log (same reasoning as run-nf-test.ts,
+    // plan-run and validate-patch). The summary table below is escaped for
+    // HTML separately; this is the log path, which needs its own encoding.
+    core.info(`  ${row.setting} = ${JSON.stringify(row.raw)} (${row.source})`)
   }
 
   core.summary.addHeading('read-config: resolved settings', 3).addTable([
@@ -109,6 +129,7 @@ export async function run(): Promise<void> {
     return {
       setting: setting.output,
       value: encodeOutput(resolved.value),
+      raw: resolved.value,
       source: resolved.source
     }
   })
