@@ -734,8 +734,8 @@ to exclude something else.
 ### The `pr-comment` artifact
 
 The `nf-core` job uploads an artifact named `pr-comment`,
-`if: always() && github.event_name == 'pull_request'`, for stage 7's
-`pr-comment.yml` poster to read:
+`if: always() && github.event_name == 'pull_request'`, for
+[`pr-comment.yml`](#the-pr-commentyml-workflow) to read:
 
 | File            | Contents                                                                                                                                                                      |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -751,11 +751,11 @@ already shows its own output in the Actions log. The `nf-core` job also runs on
 `github.event_name == 'pull_request'` keeps a release run from uploading an
 artifact with a blank `pr_number.txt`.
 
-**For stage 7: the artifact may be entirely absent, and that is normal, not an
-error.** A `release` run never uploads it, by the gate above. A job timeout or a
-cancelled run skips `if: always()` steps too, the same as any other step, so
-`pr-comment.yml` must treat a missing artifact the same way it treats a missing
-`comment.md`: nothing to post.
+**The artifact may be entirely absent, and that is normal, not an error.** A
+`release` run never uploads it, by the gate above. A job timeout or a cancelled
+run skips `if: always()` steps too, the same as any other step. See
+[the `post-comment` action](#the-post-comment-action) for how the poster treats
+that.
 
 ### Migrating from a pipeline's own `linting.yml` and `nextflow-lint.yml`
 
@@ -784,6 +784,287 @@ cancelled run skips `if: always()` steps too, the same as any other step, so
   `github.base_ref != 'master' || github.base_ref != 'main'` (always true, an
   `&&`/`||` mix-up), which ran the non-release lint even on a release pull
   request, alongside the release lint. This workflow uses the correct `&&`.
+
+## The `post-comment` action
+
+The [`post-comment`](actions/post-comment) action reads a `pr-comment` artifact
+(see [The `pr-comment` artifact](#the-pr-comment-artifact) above) and posts or
+updates a pull request comment from it. It is the code between untrusted input
+and a write operation: everything in the artifact was produced by a job that may
+have run pull request code, so `post-comment` validates every field before using
+it, and never executes anything the artifact contains.
+
+```yaml
+- name: Post or update the pull request comment
+  uses: nf-core/actions/actions/post-comment@v1
+  with:
+    artifact-path: ${{ runner.temp }}/pr-comment
+    github-token: ${{ github.token }}
+    head-sha: ${{ github.event.workflow_run.head_sha }}
+```
+
+| Input           | Required | Purpose                                                                                                                               |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `artifact-path` | Yes      | Directory the `pr-comment` artifact was downloaded into. Missing entirely, or present with no `pr_number.txt`, means nothing to post. |
+| `github-token`  | Yes      | Token used to verify the pull request and to create or update the comment. See [Token](#token) below.                                 |
+| `head-sha`      | Yes      | Commit SHA to verify the artifact's claimed pull request number against.                                                              |
+
+### What it validates, and why
+
+**The pull request number.** `pr_number.txt` is written by a job that ran pull
+request code; nothing stops that job writing a different number, which would let
+a contributor make the bot comment on an unrelated pull request or issue.
+`post-comment` does not trust it on its own. It calls
+`GET /repos/{owner}/{repo}/commits/{head_sha}/pulls` (a GitHub REST endpoint
+that lists the open or merged pull requests associated with a commit) using
+`head-sha`, and requires the claimed number to be in that list. `head-sha` comes
+from `github.event.workflow_run.head_sha`, part of the event that triggered this
+workflow, not from the artifact. This is deliberately not
+`github.event.workflow_run.pull_requests`: GitHub leaves that array empty
+whenever the triggering run came from a pull request opened from a fork, which
+is exactly the untrusted case this check exists for. The commit-based lookup
+works the same way for a fork and for a same-repository branch, because GitHub
+keys it by the commit itself, not by which repository holds the branch it lives
+on. A commit with no associated pull request at all (closed without merging, or
+a timing gap) is a clean no-op, logged, not a failure: there is nothing wrong,
+just nothing to post. A commit that **is** associated with one or more pull
+requests, none matching the claim, fails the action outright.
+
+**The header.** `header.txt` selects which existing comment gets replaced. A
+crafted header could collide with a different tool's own marker and let a
+contributor overwrite an unrelated comment. `post-comment` requires it to match
+`^[a-z][a-z0-9-]{0,63}$` (lowercase letters, digits and hyphens, starting with a
+letter, at most 64 characters) and rejects, rather than sanitises, anything
+else: silently rewriting a bad header would let two different inputs collapse
+onto the same marker. The validated header is wrapped in a namespaced hidden
+marker, `<!-- nf-core-actions:pr-comment:<header> -->`, invisible in the
+rendered comment. A later run finds its own earlier comment by two conditions
+together: the comment's body **starts with** that exact marker (not merely
+contains it, so an untrusted body cannot bury a lookalike marker ahead of a
+different tool's own report and hijack it, and a defence-in-depth strip of any
+marker-shaped text in the body backs this up, see below), and the comment's
+author is the login the calling token itself authenticates as (see
+[Token](#token) below for how that is resolved).
+
+**The body.** `comment.md` is untrusted Markdown, posted as data through the
+GitHub API, never interpolated into a shell command or otherwise executed, so it
+cannot be shell-injected regardless of its content. Before anything else,
+`post-comment` neutralises three shapes in it: any text shaped like one of its
+own markers (wrapped in inline code, so it cannot be mistaken for a real one),
+any `@mention` (also wrapped in inline code, so it cannot ping anyone or feed a
+mention-triggered automation), and any image embed, Markdown or raw `<img>`
+(turned into a plain link, or escaped to visible text) — a lint report has no
+legitimate need to embed a remote image, and one left alone is a tracking pixel
+fired under the bot's trusted identity. GitHub rejects a comment body over 65536
+characters; `post-comment` caps it at that length itself, truncating the body
+(never the marker) and appending a short notice, closing an unterminated ` ``` `
+fence first so the notice renders as a note under the code block instead of as a
+line inside it, so an oversized report still gets posted instead of failing
+outright. A body that is blank, or entirely whitespace, is treated the same as
+an absent one: nothing to say, not a report that erases the previous one. Beyond
+this, the body is not otherwise sanitised: it renders under the bot's own
+account, which a contributor cannot spoof, so content that merely _looks like_ a
+maintainer or a status is a rendering concern, not a privilege one; scanning
+Markdown for such content would either miss a real attempt or flag the file
+names and lint messages a legitimate report legitimately contains. This was a
+deliberate choice, not an oversight. See also
+[What a posted comment does not prove](#what-a-posted-comment-does-not-prove)
+below.
+
+**Order of checks.** The header and pull request number are validated as soon as
+the artifact is read, whether or not there is a comment to post; the
+commit/pull-request lookup above, which needs an API call, only runs once
+`comment.md` is confirmed present, since nothing is posted otherwise.
+
+### Token
+
+`github-token` must be the ephemeral, per-job `GITHUB_TOKEN`, with
+`pull-requests: write`. This is required, not merely sufficient. `comment.md`'s
+content is attacker-controlled (see above), and a workflow event `GITHUB_TOKEN`
+authors never triggers another workflow. A long-lived token (a personal access
+token, commonly substituted so a bot comment triggers other workflows, for
+example a lint-fix bot watching for a particular phrase) does not have that
+protection: a lint report containing the trigger phrase would then fire that
+workflow, with the commenter read as an account that has write access. Passing
+anything other than `GITHUB_TOKEN` here reopens that chain.
+
+`post-comment` does not hardcode the login it searches for. It calls `GET /user`
+with the supplied token and uses the login that returns. A personal access token
+answers that call directly. `GITHUB_TOKEN`, like every GitHub App installation
+token, does not: `GET /user` needs a user-to-server token and returns 403 for
+one. That 403 is itself the reliable signal, not a failure to work around:
+GitHub Actions' own token always posts comments under the fixed
+`github-actions[bot]` login, so `post-comment` falls back to that literal string
+only in the one case it is guaranteed correct for.
+
+### Implementation note: `@actions/github`
+
+`post-comment` calls the GitHub API through `@actions/github` (Octokit) rather
+than hand-rolled `fetch` calls. It is a first-party package in the same
+`@actions/*` trust tier as `@actions/core`, `@actions/exec` and `@actions/io`,
+already dependencies of this repo, and it handles response pagination
+(`octokit.paginate`, used for both the commit/pull-request lookup and the
+existing-comment search) and GitHub's own error format, which a hand-rolled
+version would otherwise have to reimplement for this security-sensitive path.
+
+### What a posted comment does not prove
+
+A bot comment is not evidence that a check passed. A contributor controls both
+sides of their own pull request: the copy of the producer workflow's stub that
+runs, and the artifact content it uploads. Nothing stops a pull request from
+carrying a stub that fabricates a `comment.md` reporting success regardless of
+what actually ran, and that fabricated report then appears under the bot's own
+identity, on that same pull request. Two things limit this. It cannot be
+redirected to a different pull request: the pull-request-number check above
+verifies that independently of the artifact's own claim. And it cannot affect a
+required check: branch protection reads real job results from the aggregate job,
+never the comment's text. Read a bot comment as a convenience summary, not as
+proof.
+
+## The `pr-comment.yml` workflow
+
+[`pr-comment.yml`](.github/workflows/pr-comment.yml) replaces a pipeline's own
+vendored comment-posting workflow (`dawidd6/action-download-artifact` plus
+`marocchino/sticky-pull-request-comment`). It downloads the `pr-comment`
+artifact from the exact run that triggered it and hands the result to
+[the `post-comment` action](#the-post-comment-action).
+
+```yaml
+# .github/workflows/pr-comment.yml in a pipeline repo
+name: pr-comment
+
+on:
+  workflow_run:
+    workflows:
+      - nf-core linting
+      - nf-test
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  post-comment:
+    permissions:
+      actions: read
+      pull-requests: write
+    uses: nf-core/actions/.github/workflows/pr-comment.yml@v1
+```
+
+`workflows:` names the pipeline's own producer workflows by their `name:` field
+(`nf-core linting`, `nf-test`; see their own stubs above), not this repo's
+reusable workflow file names. Add to that list as the pipeline adopts more
+producers of the `pr-comment` artifact contract; a name that does not match a
+real workflow, for example a typo, simply never fires, silently, so double-check
+it against the producer's own `name:` line. `types: [completed]` is required:
+`workflow_run` defaults to firing on `requested`, `in_progress`, **and**
+`completed`, and only a `completed` run has an artifact to download.
+
+The vendored workflow this replaces watched four producers. This stub lists two,
+`nf-core linting` and `nf-test`, because the other two do not exist here yet:
+`template-version-comment.yml` (stage 8) and `branch.yml` (stage 9) each add a
+name to this list once built. Add each one, in the pull request that adds the
+producer itself, as described above.
+
+The calling job grants `actions: read` and `pull-requests: write`, the same two
+permissions [`pr-comment.yml`](.github/workflows/pr-comment.yml)'s own job
+requests; see [Security model](#security-model) below for why each is needed.
+Neither `contents` nor `issues` is required: this workflow never checks out
+anything, and GitHub's `pull-requests` scope already covers writing a comment on
+a pull request through the Issues API.
+
+### Security model
+
+This workflow runs on `workflow_run`, always in the base repository, with a
+write token, once the producing workflow has already finished. Everything the
+artifact contains came from a job that may have run pull request code. The job
+here never checks out or executes any of it: it downloads a plain-text artifact
+from the exact triggering run (`run-id: github.event.workflow_run.id`, never a
+bare artifact name, which could otherwise resolve to a different run) and passes
+it to `post-comment`, which validates the pull request number, the header, and
+the body's size before using any of them (see
+[above](#what-it-validates-and-why)). `actions: read` is scoped to checking for
+and downloading that one artifact; `pull-requests: write` is scoped to verifying
+and posting the comment. Every step in the job's step list is `gh` (GitHub's own
+CLI, preinstalled on every GitHub-hosted runner), a first-party GitHub action
+(`actions/download-artifact`), or this repo's own action: no third-party action
+ever runs in this job, in line with this repo's rule that a privileged job runs
+no third-party action.
+
+### `workflow_run` only runs from the default branch
+
+GitHub decides whether, and how, a `workflow_run`-triggered workflow runs using
+the copy of that workflow file on the repository's **default branch**, not the
+copy in whatever pull request or branch is being tested. Two consequences for a
+pipeline adopting this stub:
+
+- **A pull request that adds or edits this stub does nothing by itself.**
+  Nothing runs from it until it is merged to the default branch; you cannot see
+  it fire by opening a pull request against itself. Merge it, then test against
+  a following pull request.
+- **A change to `workflows:` (for example adding a newly adopted producer) only
+  takes effect once merged**, the same way. Between merging a producer
+  workflow's own name change and merging the matching update here, a run can
+  silently stop matching; keep both changes in the same pull request where
+  possible.
+
+### Missing `if-no-files-found` for a cross-run download
+
+`actions/download-artifact` has no input to make a cross-run download of a
+missing artifact succeed quietly; a run that has none throws instead. Rather
+than downloading first and using `continue-on-error` to paper over any failure,
+this workflow asks the API whether the artifact exists first
+(`gh api .../actions/runs/<id>/artifacts`), and only runs the download step when
+it does. A legitimately absent artifact skips the download step entirely and
+reaches `post-comment` as an empty directory, treated the same as a directory
+that was never created: nothing to post. A real download error (a rate limit, an
+artifact that expired between the check and the download) now fails the job
+instead of looking identical to "no artifact" and silently never reaching the
+pull request.
+
+### Runs for the same pull request are serialised
+
+Two pushes to the same pull request in quick succession can finish their
+producer runs close enough together that two `workflow_run` jobs each see no
+existing comment yet and each create one; a later run then only ever finds and
+updates the first, leaving the second stale forever. This workflow sets a
+`concurrency` group (`pr-comment`, with `cancel-in-progress: false`) at its own
+top level, so GitHub queues a second call behind a first one still running
+instead of letting them race. It is one group for every pull request, not one
+per pull request: `github.event.workflow_run` cannot name the pull request
+reliably without an API call (see [above](#what-it-validates-and-why)), and a
+concurrency group name is evaluated before any step runs, so it cannot make one
+either. Queuing unrelated pull requests behind each other is a small cost for a
+short, five-minute job; `cancel-in-progress: false` matters more here than the
+group's breadth, since cancelling a run drops a report instead of posting it.
+
+### Migrating from the vendored workflow
+
+- **Two third-party actions in a privileged job are gone.**
+  `dawidd6/action-download-artifact` and
+  `marocchino/sticky-pull-request-comment` both ran with a
+  `pull-requests: write` token; this workflow replaces them with a first-party
+  download action and this repo's own reviewed code. See
+  [Security model](#security-model) above.
+- **The pull request number is now verified**, not just checked for being
+  numeric. A legitimate producer is unaffected; anything that relied on posting
+  to a number the triggering commit was not actually associated with now fails
+  instead.
+- **The comment marker changed.** The vendored workflow's sticky-comment marker
+  is not the same text as `post-comment`'s own
+  (`<!-- nf-core-actions:pr-comment:<header> -->`). The first run after
+  migrating posts a new comment instead of updating the old one; every run after
+  that updates correctly, from the new marker. The old comment is left behind,
+  unmanaged.
+- **The producer-side artifact contract is unchanged.** `pr_number.txt`,
+  `header.txt` and `comment.md` are the same three files the vendored
+  `linting.yml` already built (see [above](#the-pr-comment-artifact)); no
+  producer needs to change.
+- **`types: [completed]` is new.** The vendored workflow's `on: workflow_run:`
+  block had no `types:` filter, so it ran on `requested` and `in_progress` too,
+  doing nothing on either (no artifact exists yet). Add `types: [completed]` in
+  the stub, as shown above.
+- **An oversized report now gets truncated and posted, instead of failing.** See
+  [The body](#what-it-validates-and-why) above.
 
 ## Tag policy
 

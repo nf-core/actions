@@ -47,7 +47,7 @@ simplification and correctness before the next stage starts.
 | 4   | `nf-test.yml` workflow                      | Reusable workflow: shard discovery, test matrix, pass confirmation, failure reporting. Covers the ARM and GPU variants through config, not separate files.                       | Done        |
 | 5   | `fix-linting.yml` workflow                  | Hardened three-job design: gate on commenter, run the fixer unprivileged, validate and push the patch in a separate job. Includes the patch validation action.                   | Done        |
 | 6   | `linting.yml` workflow                      | nf-core lint, prettier, editorconfig, plus the Nextflow lint check.                                                                                                              | Done        |
-| 7   | `pr-comment.yml` workflow                   | Posts and updates comments from artifacts produced by unprivileged workflows.                                                                                                    | Not started |
+| 7   | `pr-comment.yml` workflow                   | Posts and updates comments from artifacts produced by unprivileged workflows.                                                                                                    | Done        |
 | 8   | `template-version-comment.yml` workflow     | Compares the pipeline's template version against the current release and reports it on the pull request.                                                                         | Not started |
 | 9   | `branch.yml` + `clean-up.yml` workflows     | Branch protection check for release pull requests; stale issue and pull request handling.                                                                                        | Not started |
 | 10  | `download_pipeline.yml` workflow            | Tests `nf-core pipelines download` against the pipeline, including the stub run.                                                                                                 | Not started |
@@ -71,8 +71,9 @@ workflows above are proven. Revisit after stage 12.
   `src/lib/config.ts` when a second action needs to read `.nf-core.yml`, so it
   is not re-derived or copy-pasted.
 - `nf-test.yml` (stage 4) does not build a PR-comment artifact for a failed
-  `latest-everything` run. Wire that in once stage 7's `pr-comment.yml` exists,
-  instead of duplicating its contract early.
+  `latest-everything` run. `pr-comment.yml` (stage 7) now exists to post it;
+  wire the producer side into `nf-test.yml` as a follow-up, instead of bundling
+  it into stage 7 itself.
 - `.github/actionlint.yaml` ignores one specific error so `nf-test.yml`'s `$/`
   sibling-action references lint clean: actionlint v1.7.12 predates that GitHub
   Actions syntax. Remove the ignore once actionlint recognises `$/`.
@@ -97,3 +98,8 @@ workflows above are proven. Revisit after stage 12.
   pipeline has, and no pipeline has needed a different one since. Add
   `ci.nextflow_lint_exclude` (a string-list, the same shape as `profiles`) if
   one genuinely does.
+- `pr-comment.yml` (stage 7)'s example stub lists two producer workflows,
+  `nf-core linting` and `nf-test`. The vendored workflow it replaces watched
+  four; the other two are `template-version-comment.yml` (stage 8) and
+  `branch.yml` (stage 9). Add each one to the example's `workflows:` list as its
+  own stage adds it.

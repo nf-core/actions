@@ -4,10 +4,10 @@ import { getExecOutput } from '@actions/exec'
 import { encodeOutput } from '../../lib/encode-output.js'
 import { escapeHtml } from '../../lib/escape-html.js'
 import { isEnoent } from '../../lib/is-enoent.js'
+import { describeType } from '../../lib/file-type.js'
 import { requireOnPath } from '../../lib/require-on-path.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
 import { DEFAULT_MAX_SIZE_BYTES, parseMaxSizeBytes } from './args.js'
-import { describeType } from './file-type.js'
 import { parseNumstat, type NumstatEntry } from './numstat.js'
 
 interface Inputs {
