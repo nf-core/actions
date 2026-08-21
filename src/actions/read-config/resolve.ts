@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import { type Document, isScalar } from 'yaml'
+import { assertPositiveInteger } from '../../lib/positive-integer.js'
 import { type SettingDef, type ValueKind, KNOWN_CI_KEYS } from './registry.js'
 
 export type Source = 'input' | 'file' | 'default'
@@ -24,22 +25,6 @@ function matchesKind(kind: ValueKind, value: unknown): boolean {
     )
   }
   return typeof value === 'number'
-}
-
-function isPositiveInteger(value: number): boolean {
-  return Number.isInteger(value) && value > 0
-}
-
-// Only max-shards is a 'number' setting today, and a shard count of zero or
-// a fraction cannot build a matrix. If a future number setting legitimately
-// allows zero or a fraction, give it a per-setting constraint instead of
-// loosening this one.
-function assertValidNumber(value: number, label: string): void {
-  if (!isPositiveInteger(value)) {
-    throw new Error(
-      `${label} must be a positive integer. Got: ${String(value)}`
-    )
-  }
 }
 
 /**
@@ -112,8 +97,12 @@ function parseInput(setting: SettingDef, raw: string): SettingValue {
       `Input '${setting.output}' must be ${kindLabel(setting.kind)}. Got: ${raw}`
     )
   }
+  // Only max-shards is a 'number' setting today, and a shard count of zero or
+  // a fraction cannot build a matrix. If a future number setting legitimately
+  // allows zero or a fraction, give it a per-setting constraint instead of
+  // loosening this one.
   if (setting.kind === 'number') {
-    assertValidNumber(parsed as number, `Input '${setting.output}'`)
+    assertPositiveInteger(parsed as number, `Input '${setting.output}'`)
   }
   return parsed as SettingValue
 }
@@ -155,7 +144,7 @@ export function resolveSetting(
       )
     }
     if (setting.kind === 'number') {
-      assertValidNumber(
+      assertPositiveInteger(
         fileValue as number,
         `.nf-core.yml: '${setting.configPath}'`
       )

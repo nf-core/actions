@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { isAbsolute, relative, resolve } from 'node:path'
 import * as core from '@actions/core'
 import { type Document, parseDocument } from 'yaml'
+import { encodeOutput } from '../../lib/encode-output.js'
+import { writeSummaryBestEffort } from '../../lib/write-summary.js'
 import { DEFAULT_CONFIG_FILE, SETTINGS } from './registry.js'
 import { resolveSetting, warnUnknownCiKeys, type Source } from './resolve.js'
 
@@ -92,7 +94,7 @@ function logAndWriteSummary(rows: Row[]): Promise<void> {
     ],
     ...rows.map((row) => [row.setting, row.value, row.source])
   ])
-  return core.summary.write().then(() => undefined)
+  return writeSummaryBestEffort()
 }
 
 /** Resolves every registry setting and publishes it as an action output and a summary table row. */
@@ -110,11 +112,11 @@ export async function run(): Promise<void> {
   // caller never sees a partial set of outputs.
   const rows: Row[] = SETTINGS.map((setting) => {
     const resolved = resolveSetting(setting, config, doc)
-    const value =
-      setting.kind === 'string'
-        ? (resolved.value as string)
-        : JSON.stringify(resolved.value)
-    return { setting: setting.output, value, source: resolved.source }
+    return {
+      setting: setting.output,
+      value: encodeOutput(resolved.value),
+      source: resolved.source
+    }
   })
 
   for (const row of rows) {

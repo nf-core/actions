@@ -93,6 +93,84 @@ a calling workflow can use `fromJSON()` to build a matrix.
 have no built-in default: if a pipeline's `.nf-core.yml` does not set them, the
 output is an empty string and `read-config` logs a warning.
 
+## The `get-shards` action
+
+The [`get-shards`](actions/get-shards) action replaces a composite action that
+used to be vendored into every pipeline. It runs an nf-test dry run, reads how
+many tests nf-test would execute, and turns that count into a shard matrix for a
+later job. It does not install nf-test: the calling workflow must already have
+it on `PATH`, for example through `nf-core/setup-nf-test`.
+
+```yaml
+# .github/workflows/nf-test.yml in a pipeline repo
+name: nf-test
+
+on:
+  pull_request:
+
+jobs:
+  get-shards:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.get-shards.outputs.shards }}
+      total-shards: ${{ steps.get-shards.outputs.total-shards }}
+      has-tests: ${{ steps.get-shards.outputs.has-tests }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nf-core/setup-nf-test@v1
+      - id: get-shards
+        uses: nf-core/actions/actions/get-shards@v1
+        with:
+          max-shards: 10
+          changed-since: HEAD^
+
+  test:
+    needs: get-shards
+    if: needs.get-shards.outputs.has-tests == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: ${{ fromJSON(needs.get-shards.outputs.shards) }}
+    steps:
+      - name: Run shard ${{ matrix.shard }}
+        run:
+          echo "shard ${{ matrix.shard }} of ${{
+          needs.get-shards.outputs.total-shards }}"
+```
+
+`get-shards` only produces the shard plan; it does not install nf-test, so the
+first job installs it before calling `get-shards`, for example with
+`nf-core/setup-nf-test`. The second job reads its matrix from the first job's
+outputs with `fromJSON()`, and is skipped outright when there is nothing to
+test.
+
+The shard count is `min(number of tests, max-shards)`. No tests to run is
+success, not failure: `shards` is `'[]'`, `total-shards` is `'0'`, and
+`has-tests` is `'false'`, so a calling workflow can skip its matrix job outright
+instead of running it with an empty matrix.
+
+Every value nf-test needs — the profile, `--tag`, `--changed-since` — is passed
+to the process as its own argument, with no shell involved. A tag or profile
+value cannot inject a shell command, however it is formed. Values logged for
+debugging are JSON-encoded, so a value containing a newline cannot inject a
+workflow command into the Actions log either. If nf-test's dry-run output does
+not match either a known test count or its "no tests" message, `get-shards`
+fails loudly instead of silently falling back to zero shards, because an empty
+matrix that reports success having tested nothing is worse than a failed run.
+
+### Migrating from the vendored action
+
+A pipeline switching from the old vendored composite action to `get-shards` must
+handle these differences:
+
+- The outputs are renamed: `shard` becomes `shards`, and `total_shards` becomes
+  `total-shards`.
+- The array elements in `shards` are numbers, for example `[1,2,3]`, not
+  strings.
+- The `paths` input is gone. The vendored action never used it.
+- `get-shards` does not install nf-test. Add a step such as
+  `nf-core/setup-nf-test` before it in the workflow.
+
 ## Tag policy
 
 Two different pinning rules apply, for two different trust relationships:
