@@ -64,6 +64,28 @@ function coerceStringScalar(
   return value
 }
 
+/** Throws if a string-list setting's value is an empty list. Applies to every string-list setting: an empty list never builds a usable matrix. */
+function assertNonEmptyList(value: string[], label: string): void {
+  if (value.length === 0) {
+    throw new Error(`${label} must not be an empty list.`)
+  }
+}
+
+/** Throws if the 'runner' setting's value is empty or whitespace-only. A blank runner label matches no runner, and GitHub queues the job forever instead of failing it. */
+function assertRunnerNotBlank(
+  setting: SettingDef,
+  value: unknown,
+  label: string
+): void {
+  if (
+    setting.output === 'runner' &&
+    typeof value === 'string' &&
+    value.trim() === ''
+  ) {
+    throw new Error(`${label} must not be empty.`)
+  }
+}
+
 /** Reads a dot-separated path out of a parsed YAML document. Undefined if any segment is missing. */
 export function getAtPath(doc: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((node, key) => {
@@ -103,6 +125,11 @@ function parseInput(setting: SettingDef, raw: string): SettingValue {
   // loosening this one.
   if (setting.kind === 'number') {
     assertPositiveInteger(parsed as number, `Input '${setting.output}'`)
+  }
+  // An empty list (for example 'profiles: []') builds a matrix with no
+  // entries, or a null shard string, instead of failing loudly.
+  if (setting.kind === 'string-list') {
+    assertNonEmptyList(parsed as string[], `Input '${setting.output}'`)
   }
   return parsed as SettingValue
 }
@@ -149,6 +176,17 @@ export function resolveSetting(
         `.nf-core.yml: '${setting.configPath}'`
       )
     }
+    if (setting.kind === 'string-list') {
+      assertNonEmptyList(
+        fileValue as string[],
+        `.nf-core.yml: '${setting.configPath}'`
+      )
+    }
+    assertRunnerNotBlank(
+      setting,
+      fileValue,
+      `.nf-core.yml: '${setting.configPath}'`
+    )
     core.info(
       `${setting.output}: using '${setting.configPath}' from .nf-core.yml (wins over the default)`
     )

@@ -44,7 +44,7 @@ simplification and correctness before the next stage starts.
 | 1   | `read-config` action                        | Resolves settings by input → `.nf-core.yml` → default, with warnings. Exposes the template version for gating. Every later stage depends on this.                                | Done        |
 | 2   | `get-shards` action                         | Replaces the vendored bash action. Runs an nf-test dry run, parses the count, emits the shard matrix. Fixes the shell injection in the current version.                          | Done        |
 | 3   | `nf-test` action                            | Runs one nf-test shard and parses TAP into a job summary. Tool setup stays in the stage-4 workflow.                                                                              | Done        |
-| 4   | `nf-test.yml` workflow                      | Reusable workflow: shard discovery, test matrix, pass confirmation, failure reporting. Covers the ARM and GPU variants through config, not separate files.                       | Not started |
+| 4   | `nf-test.yml` workflow                      | Reusable workflow: shard discovery, test matrix, pass confirmation, failure reporting. Covers the ARM and GPU variants through config, not separate files.                       | Done        |
 | 5   | `fix-linting.yml` workflow                  | Hardened three-job design: gate on commenter, run the fixer unprivileged, validate and push the patch in a separate job. Includes the patch validation action.                   | Not started |
 | 6   | `linting.yml` workflow                      | nf-core lint, prettier, editorconfig, plus the Nextflow lint check.                                                                                                              | Not started |
 | 7   | `pr-comment.yml` workflow                   | Posts and updates comments from artifacts produced by unprivileged workflows.                                                                                                    | Not started |
@@ -70,3 +70,20 @@ workflows above are proven. Revisit after stage 12.
   resolution) lives in `src/actions/read-config/run.ts`. Extract it to
   `src/lib/config.ts` when a second action needs to read `.nf-core.yml`, so it
   is not re-derived or copy-pasted.
+- `nf-test.yml` (stage 4) does not build a PR-comment artifact for a failed
+  `latest-everything` run. Wire that in once stage 7's `pr-comment.yml` exists,
+  instead of duplicating its contract early.
+- `.github/actionlint.yaml` ignores one specific error so `nf-test.yml`'s `$/`
+  sibling-action references lint clean: actionlint v1.7.12 predates that GitHub
+  Actions syntax. Remove the ignore once actionlint recognises `$/`.
+- `$/` needs Actions runner 2.336.0 or later and does not exist on GitHub
+  Enterprise Server. Confirm with whoever maintains the RunsOn fleet that its
+  runners are kept at 2.336.0 or later, since a lagging fleet fails every job in
+  every pipeline at action resolution. See README.md's "Referencing the sibling
+  actions" note.
+- Open decision: a contributor with write access can open a same-repository pull
+  request that reads the Sentieon secrets, for the small number of pipelines
+  whose stub passes them. This matches current behaviour and is documented in
+  README.md's "Sentieon secret exposure" section, but whether to restrict it
+  further (for example gating on a reviewer approval, as stage 11's
+  awstest/awsfulltest reviewer check will do) is still open.

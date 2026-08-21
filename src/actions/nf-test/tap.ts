@@ -34,8 +34,12 @@ export interface TapResult {
 const PLAN_LINE = /^1\.\.(\d+)\b/
 const TEST_LINE = /^(not\s+)?ok\b\s*(\d+)?\s*(.*)$/
 const BAIL_LINE = /^Bail out!\s*(.*)$/
-// An unescaped '#' introduces a directive. TAP escapes a literal '#' in a
-// description as '\#', so an escaped hash never starts one.
+// A TAP directive: an unescaped '#' followed by SKIP or TODO. This follows
+// the TAP specification. TAP's escape for a literal '#' is '\#', which this
+// regex honours (an escaped hash never starts a directive). nf-test does
+// not escape a '#' in a test name, though, so a test whose own name contains
+// an unescaped '# SKIP' or '# TODO' is read as a directive, not as its own
+// literal text. This is a known, accepted limitation: see README.md.
 const DIRECTIVE = /(?<!\\)#\s*(SKIP|TODO)\b\s*(.*)$/i
 
 /**

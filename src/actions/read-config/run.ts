@@ -3,6 +3,7 @@ import { isAbsolute, relative, resolve } from 'node:path'
 import * as core from '@actions/core'
 import { type Document, parseDocument } from 'yaml'
 import { encodeOutput } from '../../lib/encode-output.js'
+import { escapeHtml } from '../../lib/escape-html.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
 import { DEFAULT_CONFIG_FILE, SETTINGS } from './registry.js'
 import { resolveSetting, warnUnknownCiKeys, type Source } from './resolve.js'
@@ -92,7 +93,11 @@ function logAndWriteSummary(rows: Row[]): Promise<void> {
       { data: 'Value', header: true },
       { data: 'Source', header: true }
     ],
-    ...rows.map((row) => [row.setting, row.value, row.source])
+    // 'setting' and 'source' are internal, fixed values. 'value' can come
+    // from the pipeline's .nf-core.yml, which on a pull request is the
+    // contributor's version of that file: addTable() writes cell data as
+    // raw HTML, unescaped, so it must be escaped here.
+    ...rows.map((row) => [row.setting, escapeHtml(row.value), row.source])
   ])
   return writeSummaryBestEffort()
 }

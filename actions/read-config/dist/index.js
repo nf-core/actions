@@ -35598,6 +35598,14 @@ function encodeOutput(value) {
     return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
+// Shared by every action that writes untrusted values into a job summary
+// table (nf-test, read-config): core.summary.addTable() writes cell data as
+// raw HTML, unescaped.
+/** Escapes text for a job summary table cell. */
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 /**
  * Writes the job summary and never throws. core.summary.write() throws when
  * GITHUB_STEP_SUMMARY is unset or unwritable, for example a local run or
@@ -35743,6 +35751,20 @@ function coerceStringScalar(kind, value, source) {
     }
     return value;
 }
+/** Throws if a string-list setting's value is an empty list. Applies to every string-list setting: an empty list never builds a usable matrix. */
+function assertNonEmptyList(value, label) {
+    if (value.length === 0) {
+        throw new Error(`${label} must not be an empty list.`);
+    }
+}
+/** Throws if the 'runner' setting's value is empty or whitespace-only. A blank runner label matches no runner, and GitHub queues the job forever instead of failing it. */
+function assertRunnerNotBlank(setting, value, label) {
+    if (setting.output === 'runner' &&
+        typeof value === 'string' &&
+        value.trim() === '') {
+        throw new Error(`${label} must not be empty.`);
+    }
+}
 /** Reads a dot-separated path out of a parsed YAML document. Undefined if any segment is missing. */
 function getAtPath(doc, path) {
     return path.split('.').reduce((node, key) => {
@@ -35777,6 +35799,11 @@ function parseInput(setting, raw) {
     if (setting.kind === 'number') {
         assertPositiveInteger(parsed, `Input '${setting.output}'`);
     }
+    // An empty list (for example 'profiles: []') builds a matrix with no
+    // entries, or a null shard string, instead of failing loudly.
+    if (setting.kind === 'string-list') {
+        assertNonEmptyList(parsed, `Input '${setting.output}'`);
+    }
     return parsed;
 }
 /**
@@ -35806,6 +35833,10 @@ function resolveSetting(setting, config, doc) {
         if (setting.kind === 'number') {
             assertPositiveInteger(fileValue, `.nf-core.yml: '${setting.configPath}'`);
         }
+        if (setting.kind === 'string-list') {
+            assertNonEmptyList(fileValue, `.nf-core.yml: '${setting.configPath}'`);
+        }
+        assertRunnerNotBlank(setting, fileValue, `.nf-core.yml: '${setting.configPath}'`);
         info(`${setting.output}: using '${setting.configPath}' from .nf-core.yml (wins over the default)`);
         return { value: fileValue, source: 'file' };
     }
@@ -35900,7 +35931,11 @@ function logAndWriteSummary(rows) {
             { data: 'Value', header: true },
             { data: 'Source', header: true }
         ],
-        ...rows.map((row) => [row.setting, row.value, row.source])
+        // 'setting' and 'source' are internal, fixed values. 'value' can come
+        // from the pipeline's .nf-core.yml, which on a pull request is the
+        // contributor's version of that file: addTable() writes cell data as
+        // raw HTML, unescaped, so it must be escaped here.
+        ...rows.map((row) => [row.setting, escapeHtml(row.value), row.source])
     ]);
     return writeSummaryBestEffort();
 }

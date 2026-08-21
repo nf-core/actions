@@ -224,6 +224,23 @@ describe('parseTap', () => {
       expect(result.counts.skipped).toBe(0)
     })
 
+    it('documents the known limitation: an unescaped "# TODO" in a test name is read as a directive, not as text', () => {
+      // nf-test does not escape '#' in a test's own name, unlike the
+      // synthetic '\#' case above. A real failing test named this way is
+      // therefore misread as an expected failure and reports green. This is
+      // TAP-conformant behaviour, not a parser bug: see README.md.
+      const result = parseTap(
+        'not ok 3 - Should fail when the config has a # TODO comment'
+      )
+      expect(result.tests[0]).toEqual({
+        number: 3,
+        description: 'Should fail when the config has a',
+        status: 'todo'
+      })
+      expect(result.counts.failed).toBe(0)
+      expect(result.counts.todo).toBe(1)
+    })
+
     it('still recognises a real trailing directive after an escaped hash earlier in the line', () => {
       const result = parseTap(
         'not ok 1 - Handles a literal \\# in config # TODO fix upstream bug'

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as core from '@actions/core'
 import { encodeOutput } from '../../lib/encode-output.js'
+import { escapeHtml } from '../../lib/escape-html.js'
 import { getInputOrDefault } from '../../lib/optional-input.js'
 import { DEFAULT_CHANGED_SINCE, runNfTest } from '../../lib/run-nf-test.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
@@ -81,11 +82,6 @@ const STATUS_ICON: Record<TapStatus, string> = {
   todo: '📝'
 }
 
-/** Escapes text for a job summary table cell. addTable() writes cell data as raw HTML, unescaped. */
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
 function writeSummary(
   parsed: TapResult,
   counts: TapCounts,
@@ -107,8 +103,8 @@ function writeSummary(
       ...parsed.tests.map((test) => [
         STATUS_ICON[test.status],
         escapeHtml(test.description || `#${String(test.number ?? '?')}`),
-        inputs.profile,
-        `${String(inputs.shard)}/${String(inputs.totalShards)}`
+        escapeHtml(inputs.profile),
+        escapeHtml(`${String(inputs.shard)}/${String(inputs.totalShards)}`)
       ])
     ])
   return writeSummaryBestEffort()
@@ -129,6 +125,20 @@ export async function run(): Promise<void> {
   const parsed = parseTap(readTapFile(tapPath))
   const counts = parsed.counts
 
+  // Set every output before checking for failure below. The zero-test case
+  // is exactly where a caller most wants this detail (a stuck shard, a
+  // renamed nf-test flag), so it must not be the one path that leaves every
+  // output unset.
+  core.setOutput('total', encodeOutput(counts.total))
+  core.setOutput('passed', encodeOutput(counts.passed))
+  core.setOutput('failed', encodeOutput(counts.failed))
+  core.setOutput('todo', encodeOutput(counts.todo))
+  core.setOutput('skip', encodeOutput(counts.skip))
+  core.setOutput('skipped', encodeOutput(counts.skipped))
+  core.setOutput('tap-path', tapPath)
+  core.setOutput('exit-code', encodeOutput(exitCode))
+  core.setOutput('bailed-out', encodeOutput(parsed.bailOutReason !== undefined))
+
   // A run that tests nothing must never look like a pass, whatever nf-test's
   // exit code was: there is no legitimate zero-test path. get-shards caps
   // the shard count at the number of tests it found, and its has-tests
@@ -141,16 +151,6 @@ export async function run(): Promise<void> {
       `nf-test reported zero tests (exit code ${String(exitCode)}). A run that tests nothing is always treated as a failure. Output:\n${stdout}${stderr}`
     )
   }
-
-  core.setOutput('total', encodeOutput(counts.total))
-  core.setOutput('passed', encodeOutput(counts.passed))
-  core.setOutput('failed', encodeOutput(counts.failed))
-  core.setOutput('todo', encodeOutput(counts.todo))
-  core.setOutput('skip', encodeOutput(counts.skip))
-  core.setOutput('skipped', encodeOutput(counts.skipped))
-  core.setOutput('tap-path', tapPath)
-  core.setOutput('exit-code', encodeOutput(exitCode))
-  core.setOutput('bailed-out', encodeOutput(parsed.bailOutReason !== undefined))
 
   await writeSummary(parsed, counts, inputs)
 

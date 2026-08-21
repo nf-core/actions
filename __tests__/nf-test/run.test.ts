@@ -150,20 +150,24 @@ describe('a run with one failure', () => {
 })
 
 describe('a run that reports zero tests', () => {
-  it('fails even when nf-test exits 0 and writes no TAP output at all', async () => {
+  it('fails even when nf-test exits 0 and writes no TAP output at all, but still sets outputs', async () => {
     mockRun(undefined, 0)
     execResult = { stdout: '', stderr: '', exitCode: 0 }
     await expect(run()).rejects.toThrow(/nf-test reported zero tests/)
-    expect(setOutput).not.toHaveBeenCalled()
+    // The zero-test path is exactly where a caller most wants the detail:
+    // outputs must be set before the failure is thrown, not skipped.
+    expect(outputValues().total).toBe('0')
+    expect(outputValues()['exit-code']).toBe('0')
+    expect(outputValues()['bailed-out']).toBe('false')
   })
 
-  it('fails even when nf-test exits 0 and the TAP file has a plan line but no results', async () => {
+  it('fails even when nf-test exits 0 and the TAP file has a plan line but no results, but still sets outputs', async () => {
     mockRun('1..3\n', 0)
     await expect(run()).rejects.toThrow(/nf-test reported zero tests/)
-    expect(setOutput).not.toHaveBeenCalled()
+    expect(outputValues().total).toBe('0')
   })
 
-  it('includes the captured output when it fails with a non-zero exit and no parseable TAP', async () => {
+  it('includes the captured output when it fails with a non-zero exit and no parseable TAP, but still sets outputs', async () => {
     mockRun(undefined, 1)
     execResult = {
       stdout: 'boom: crashed before writing TAP',
@@ -181,7 +185,7 @@ describe('a run that reports zero tests', () => {
     expect(message).toMatch(/nf-test reported zero tests/)
     expect(message).toMatch(/boom: crashed before writing TAP/)
     expect(message).toMatch(/stack trace/)
-    expect(setOutput).not.toHaveBeenCalled()
+    expect(outputValues()['exit-code']).toBe('1')
   })
 })
 
@@ -219,6 +223,19 @@ describe('nf-test missing from PATH', () => {
     which.mockResolvedValue('')
     await expect(run()).rejects.toThrow(/install it before this action runs/)
     expect(getExecOutput).not.toHaveBeenCalled()
+  })
+})
+
+describe('job summary escaping', () => {
+  it('escapes the profile and shard cells in the summary table, not just the description', async () => {
+    setInputs({ profile: '<docker>' })
+    mockRun(ALL_PASSING_TAP, 0)
+    await run()
+
+    const [rows] = summary.addTable!.mock.calls[0] as [unknown[][]]
+    const dataRow = rows[1] as string[]
+    expect(dataRow).toContain('&lt;docker&gt;')
+    expect(dataRow).not.toContain('<docker>')
   })
 })
 

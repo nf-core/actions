@@ -11,7 +11,8 @@ needs a 141-repo campaign; changing it here needs one tag move.
 ## Example: a pipeline using this repo
 
 A pipeline repo does not implement test logic itself. It calls the shared
-workflow and passes its own settings:
+[`nf-test.yml`](#the-nf-testyml-workflow) workflow and passes its own settings
+through `.nf-core.yml`, not through the stub:
 
 ```yaml
 # .github/workflows/nf-test.yml in a pipeline repo
@@ -19,20 +20,40 @@ name: nf-test
 
 on:
   pull_request:
-  push:
-    branches:
-      - master
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
 
 jobs:
   test:
+    permissions:
+      contents: read
     uses: nf-core/actions/.github/workflows/nf-test.yml@v1
-    with:
-      profile: docker
-    secrets: inherit
+    secrets:
+      SENTIEON_LICSRVR_IP: ${{ secrets.SENTIEON_LICSRVR_IP }}
+      SENTIEON_LICENSE_MESSAGE: ${{ secrets.SENTIEON_LICENSE_MESSAGE }}
+      SENTIEON_ENCRYPTION_KEY: ${{ secrets.SENTIEON_ENCRYPTION_KEY }}
 ```
 
-The pipeline repo never edits test logic, matrix setup, or reporting. It only
-supplies the small set of inputs the shared workflow accepts.
+The pipeline repo never edits test logic, matrix setup, or reporting. The three
+`secrets:` lines are optional: omit them entirely for a pipeline that does not
+use Sentieon. See [The `nf-test.yml` workflow](#the-nf-testyml-workflow) for the
+full input and secret list, and for the ARM/GPU variant example.
+
+The workflow-level `permissions: {}` denies everything by default. The `test:`
+job grants back only `contents: read`, the most every job inside
+[`nf-test.yml`](.github/workflows/nf-test.yml) requests. A called (reusable)
+workflow can only narrow the permissions the calling job holds, never widen
+them: without this job-level grant, GitHub rejects the run at validation,
+because the called workflow's jobs ask for `contents: read` while the caller
+grants `contents: none`.
 
 ## Configuration precedence
 
@@ -121,11 +142,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: nf-core/setup-nextflow@v1
       - uses: nf-core/setup-nf-test@v1
       - id: get-shards
         uses: nf-core/actions/actions/get-shards@v1
         with:
           max-shards: 10
+          # 'test,docker': the same profile the 'test' job below runs.
+          profile: test,docker
           changed-since: HEAD^
 
   test:
@@ -141,6 +165,9 @@ jobs:
           echo "shard ${{ matrix.shard }} of ${{
           needs.get-shards.outputs.total-shards }}"
 ```
+
+`get-shards` runs nf-test, so Nextflow must already be on `PATH` for the dry run
+too, not only for the real test run below.
 
 `get-shards` only produces the shard plan; it does not install nf-test, so the
 first job installs it before calling `get-shards`, for example with
@@ -208,6 +235,10 @@ jobs:
         uses: nf-core/actions/actions/get-shards@v1
         with:
           max-shards: 10
+          # Must match the 'nf-test' step's profile below: a different
+          # profile could select a different test set, and the 'nf-test'
+          # action treats zero tests as a hard failure.
+          profile: test,docker
           changed-since: HEAD^
 
   test:
@@ -227,7 +258,7 @@ jobs:
       - uses: nf-core/setup-nf-test@v1
       - uses: nf-core/actions/actions/nf-test@v1
         with:
-          profile: docker
+          profile: test,docker
           shard: ${{ matrix.shard }}
           total-shards: ${{ needs.get-shards.outputs.total-shards }}
 ```
@@ -244,6 +275,16 @@ the TAP plan line promises more tests than were actually reported: both mean the
 run tested nothing or was cut short. There is no legitimate zero-test path for
 this action: `get-shards` already caps the shard count at the number of tests it
 found, and stops the matrix job outright when there are none.
+
+**TAP directive limitation.** An unescaped `#` followed by `SKIP` or `TODO`
+(case-insensitive) is read as a TAP directive, per the TAP specification, and
+the test is counted as skipped or expected-to-fail instead of by its own
+ok/not-ok result. nf-test does not escape a `#` in a test's own name, so a test
+named with an unescaped `# SKIP` or `# TODO` sequence is read as a directive,
+not as literal text: a real failure with such a name can report green. An
+escaped `\#` is read correctly as a literal character. This is a known, accepted
+limitation of TAP-conformant parsing, not a bug; avoid that sequence in a test
+name if it matters.
 
 `extra-args` accepts a JSON array of strings, for example
 `'["--follow-dependencies"]'`, so a pipeline with unusual nf-test needs can pass
@@ -268,6 +309,135 @@ handle these differences:
   specific runner user's home directory, and this action does not own the
   working directory's lifecycle. Runner hygiene, if still needed, belongs in the
   calling workflow.
+
+## The `nf-test.yml` workflow
+
+[`nf-test.yml`](.github/workflows/nf-test.yml) is a reusable workflow that
+replaces a pipeline's entire nf-test CI: shard discovery, the test matrix, tool
+setup, and a stable gate job for branch protection. A pipeline calls it with the
+stub shown in
+[Example: a pipeline using this repo](#example-a-pipeline-using-this-repo).
+
+### Inputs and secrets
+
+| Input     | Default | Purpose                                                                                                                                                                                   |
+| --------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `variant` | `''`    | Names this call's flavour, for example `arm` or `gpu`. Any non-default value restricts the matrix to the fastest profile, regardless of branch. `gpu` also enables GPU-gated tests.       |
+| `runner`  | `''`    | Overrides the RunsOn runner label for this call only. Forwarded straight to `read-config`'s own `runner` input, so it wins over `.nf-core.yml` the same way any `read-config` input does. |
+
+| Secret                     | Required | Purpose                                      |
+| -------------------------- | -------- | -------------------------------------------- |
+| `SENTIEON_LICSRVR_IP`      | No       | Passed through to the pipeline's nf-test run |
+| `SENTIEON_LICENSE_MESSAGE` | No       | Passed through to the pipeline's nf-test run |
+| `SENTIEON_ENCRYPTION_KEY`  | No       | Passed through to the pipeline's nf-test run |
+
+Every other setting — `nf-test-version`, `nextflow-versions`, `profiles`,
+`max-shards`, `nf-test-workdir`, `runner`, and `nf-core-version` — comes from
+`.nf-core.yml`'s `ci:` block through [`read-config`](#the-ci-config-block). This
+keeps two pipelines' stubs byte-identical: only a call that genuinely needs a
+different runner or a different hardware flavour sets an input at all.
+
+### ARM or GPU variant
+
+A pipeline that also validates on ARM keeps a second, equally small stub file
+and calls the same workflow with `variant` and `runner` set:
+
+```yaml
+# .github/workflows/nf-test-arm.yml in a pipeline repo
+name: nf-test (ARM)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group:
+    ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: nf-core/actions/.github/workflows/nf-test.yml@v1
+    with:
+      variant: arm
+      runner: 4cpu-linux-arm64
+```
+
+There is no separate `nf-test-arm.yml` or `nf-test-gpu.yml` workflow in this
+repo: the ARM and GPU flavours fall out of `variant` and `runner` on the one
+shared workflow, not out of a duplicated file.
+
+As in the default stub, `test:` grants `contents: read` even though the
+workflow-level default is `permissions: {}`: see the note after the default stub
+above.
+
+### Referencing the sibling actions
+
+`nf-test.yml` calls `read-config`, `plan-run`, `get-shards`, and `nf-test` with
+GitHub's `$/` self-repository syntax, for example `uses: $/actions/get-shards`.
+`$/` resolves to this repo at the exact commit already running, with no separate
+tag lookup. A plain `owner/repo/path@v1` reference, by contrast, is
+independently re-resolved to whatever `v1` currently points at each time a job
+starts, so a release that moves `v1` while a long matrix run is still starting
+its jobs could mix commits within one run. `$/` cannot skew that way: every job
+runs the sibling action from the same commit as the `nf-test.yml` version the
+pipeline called, because it is the same resolution, not a new one.
+
+`$/` requires Actions runner 2.336.0 or later and is not yet recognised by
+actionlint v1.7.12; `.github/actionlint.yaml` carries a narrow, named `ignore`
+rule for exactly this, to remove once actionlint catches up.
+
+**Operational prerequisite.** `$/` needs Actions runner **2.336.0 or later**,
+and does not exist on **GitHub Enterprise Server** at all. Most of this
+workflow's jobs run on self-hosted runners that RunsOn provisions; this repo
+does not control the runner version on that fleet. If a runner in the fleet is
+older than 2.336.0, every job in every pipeline that calls this workflow fails
+at action resolution, with an error that does not mention the runner version (it
+reads as the action reference being invalid, not as a version problem). Confirm
+with whoever maintains the RunsOn fleet that its runners are kept at 2.336.0 or
+later before relying on this workflow.
+
+### Migrating from a pipeline's own `nf-test.yml`
+
+- **Check names**: `nf-test-changes`, `nf-test`, and `confirm-pass` keep their
+  names, so existing branch-protection rules still match. `config` is new: it is
+  not required, so it does not need adding to branch protection, but it will
+  appear in the checks list.
+- **Tool installation moves into this workflow.** A pipeline that vendored
+  `nf-core/setup-nextflow`, `nf-core/setup-nf-test`, or a container-engine setup
+  step in its own `nf-test.yml` removes that step: this workflow already runs
+  it, driven by `.nf-core.yml`'s `ci.nf_test_version`.
+- **`SKIP_SENTIEON`** is now computed from whether the `SENTIEON_LICSRVR_IP`
+  secret is empty, not from the event type. A pipeline that skipped Sentieon
+  tests on conda for reasons other than missing secrets needs to express that in
+  its own nf-test tags instead.
+- **The PR-comment artifact for a failed `latest-everything` run is not built
+  yet.** That lands with the `pr-comment.yml` workflow; until then, a
+  `latest-everything` failure shows only as a non-blocking, orange check and in
+  that job's own summary.
+
+### Sentieon secret exposure
+
+The `SENTIEON_LICSRVR_IP`, `SENTIEON_LICENSE_MESSAGE`, and
+`SENTIEON_ENCRYPTION_KEY` secrets are optional on `workflow_call`. Only a
+pipeline whose stub passes them (see
+[Example: a pipeline using this repo](#example-a-pipeline-using-this-repo)) is
+affected by what follows; today that is a small number of pipelines, for example
+those that test Sentieon tools such as sarek.
+
+GitHub withholds secrets only from a fork's pull request. A pull request from a
+branch of the pipeline's own repository, opened by anyone with write access,
+still receives these secrets, because it is not a fork pull request. Its test
+code runs with the Sentieon credentials available to it. This matches what these
+pipelines do today: this fix does not change the behaviour, only documents it.
+
+In short: a fork pull request is unaffected; a same-repository branch from a
+contributor with write access is trusted with these secrets, the same as any
+other secret a workflow makes available to a non-fork pull request.
 
 ## Tag policy
 

@@ -3,13 +3,12 @@ import os__default, { EOL } from 'os';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import { promises, constants as constants$5 } from 'fs';
-import * as path from 'path';
+import 'path';
 import http from 'http';
 import https from 'https';
 import 'net';
 import require$$1 from 'tls';
-import * as events$1 from 'events';
-import events__default from 'events';
+import events$1 from 'events';
 import 'assert';
 import require$$6 from 'util';
 import require$$0$1 from 'node:assert';
@@ -30,13 +29,9 @@ import require$$1$3 from 'node:url';
 import require$$5$2 from 'node:async_hooks';
 import require$$1$4 from 'node:console';
 import require$$1$5 from 'node:dns';
-import require$$5$3, { StringDecoder } from 'string_decoder';
-import * as child from 'child_process';
-import { setTimeout as setTimeout$1 } from 'timers';
-import { readFileSync } from 'node:fs';
-import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import require$$5$3 from 'string_decoder';
+import 'child_process';
+import 'timers';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -201,7 +196,7 @@ function requireTunnel$1 () {
 	var tls = require$$1;
 	var http$1 = http;
 	var https$1 = https;
-	var events = events__default;
+	var events = events$1;
 	var util = require$$6;
 
 
@@ -28271,7 +28266,7 @@ var MediaTypes;
     });
 };
 
-var __awaiter$4 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -28293,7 +28288,7 @@ class Summary {
      * @returns step summary file path
      */
     filePath() {
-        return __awaiter$4(this, void 0, void 0, function* () {
+        return __awaiter(this, void 0, void 0, function* () {
             if (this._filePath) {
                 return this._filePath;
             }
@@ -28337,7 +28332,7 @@ class Summary {
      * @returns {Promise<Summary>} summary instance
      */
     write(options) {
-        return __awaiter$4(this, void 0, void 0, function* () {
+        return __awaiter(this, void 0, void 0, function* () {
             const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
             const filePath = yield this.filePath();
             const writeFunc = overwrite ? writeFile : appendFile;
@@ -28351,7 +28346,7 @@ class Summary {
      * @returns {Summary} summary instance
      */
     clear() {
-        return __awaiter$4(this, void 0, void 0, function* () {
+        return __awaiter(this, void 0, void 0, function* () {
             return this.emptyBuffer().write({ overwrite: true });
         });
     }
@@ -28544,7 +28539,7 @@ class Summary {
 const _summary = new Summary();
 const summary = _summary;
 
-var __awaiter$3 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+(undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -28555,138 +28550,10 @@ var __awaiter$3 = (undefined && undefined.__awaiter) || function (thisArg, _argu
 };
 const { chmod, copyFile, lstat, mkdir, open, readdir, rename, rm, rmdir, stat, symlink, unlink } = fs.promises;
 // export const {open} = 'fs'
-const IS_WINDOWS$1 = process.platform === 'win32';
+process.platform === 'win32';
 fs.constants.O_RDONLY;
-function exists(fsPath) {
-    return __awaiter$3(this, void 0, void 0, function* () {
-        try {
-            yield stat(fsPath);
-        }
-        catch (err) {
-            if (err.code === 'ENOENT') {
-                return false;
-            }
-            throw err;
-        }
-        return true;
-    });
-}
-/**
- * On OSX/Linux, true if path starts with '/'. On Windows, true for paths like:
- * \, \hello, \\hello\share, C:, and C:\hello (and corresponding alternate separator cases).
- */
-function isRooted(p) {
-    p = normalizeSeparators(p);
-    if (!p) {
-        throw new Error('isRooted() parameter "p" cannot be empty');
-    }
-    if (IS_WINDOWS$1) {
-        return (p.startsWith('\\') || /^[A-Z]:/i.test(p) // e.g. \ or \hello or \\hello
-        ); // e.g. C: or C:\hello
-    }
-    return p.startsWith('/');
-}
-/**
- * Best effort attempt to determine whether a file exists and is executable.
- * @param filePath    file path to check
- * @param extensions  additional file extensions to try
- * @return if file exists and is executable, returns the file path. otherwise empty string.
- */
-function tryGetExecutablePath(filePath, extensions) {
-    return __awaiter$3(this, void 0, void 0, function* () {
-        let stats = undefined;
-        try {
-            // test file exists
-            stats = yield stat(filePath);
-        }
-        catch (err) {
-            if (err.code !== 'ENOENT') {
-                // eslint-disable-next-line no-console
-                console.log(`Unexpected error attempting to determine if executable file exists '${filePath}': ${err}`);
-            }
-        }
-        if (stats && stats.isFile()) {
-            if (IS_WINDOWS$1) {
-                // on Windows, test for valid extension
-                const upperExt = path.extname(filePath).toUpperCase();
-                if (extensions.some(validExt => validExt.toUpperCase() === upperExt)) {
-                    return filePath;
-                }
-            }
-            else {
-                if (isUnixExecutable(stats)) {
-                    return filePath;
-                }
-            }
-        }
-        // try each extension
-        const originalFilePath = filePath;
-        for (const extension of extensions) {
-            filePath = originalFilePath + extension;
-            stats = undefined;
-            try {
-                stats = yield stat(filePath);
-            }
-            catch (err) {
-                if (err.code !== 'ENOENT') {
-                    // eslint-disable-next-line no-console
-                    console.log(`Unexpected error attempting to determine if executable file exists '${filePath}': ${err}`);
-                }
-            }
-            if (stats && stats.isFile()) {
-                if (IS_WINDOWS$1) {
-                    // preserve the case of the actual file (since an extension was appended)
-                    try {
-                        const directory = path.dirname(filePath);
-                        const upperName = path.basename(filePath).toUpperCase();
-                        for (const actualName of yield readdir(directory)) {
-                            if (upperName === actualName.toUpperCase()) {
-                                filePath = path.join(directory, actualName);
-                                break;
-                            }
-                        }
-                    }
-                    catch (err) {
-                        // eslint-disable-next-line no-console
-                        console.log(`Unexpected error attempting to determine the actual case of the file '${filePath}': ${err}`);
-                    }
-                    return filePath;
-                }
-                else {
-                    if (isUnixExecutable(stats)) {
-                        return filePath;
-                    }
-                }
-            }
-        }
-        return '';
-    });
-}
-function normalizeSeparators(p) {
-    p = p || '';
-    if (IS_WINDOWS$1) {
-        // convert slashes on Windows
-        p = p.replace(/\//g, '\\');
-        // remove redundant slashes
-        return p.replace(/\\\\+/g, '\\');
-    }
-    // remove redundant slashes
-    return p.replace(/\/\/+/g, '/');
-}
-// on Mac/Linux, test the execute bit
-//     R   W  X  R  W X R W X
-//   256 128 64 32 16 8 4 2 1
-function isUnixExecutable(stats) {
-    return ((stats.mode & 1) > 0 ||
-        ((stats.mode & 8) > 0 &&
-            process.getgid !== undefined &&
-            stats.gid === process.getgid()) ||
-        ((stats.mode & 64) > 0 &&
-            process.getuid !== undefined &&
-            stats.uid === process.getuid()));
-}
 
-var __awaiter$2 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+(undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -28695,97 +28562,8 @@ var __awaiter$2 = (undefined && undefined.__awaiter) || function (thisArg, _argu
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-/**
- * Returns path of a tool had the tool actually been invoked.  Resolves via paths.
- * If you check and the tool does not exist, it will throw.
- *
- * @param     tool              name of the tool
- * @param     check             whether to check if tool exists
- * @returns   Promise<string>   path to tool
- */
-function which(tool, check) {
-    return __awaiter$2(this, void 0, void 0, function* () {
-        if (!tool) {
-            throw new Error("parameter 'tool' is required");
-        }
-        // recursive when check=true
-        if (check) {
-            const result = yield which(tool, false);
-            if (!result) {
-                if (IS_WINDOWS$1) {
-                    throw new Error(`Unable to locate executable file: ${tool}. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also verify the file has a valid extension for an executable file.`);
-                }
-                else {
-                    throw new Error(`Unable to locate executable file: ${tool}. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also check the file mode to verify the file is executable.`);
-                }
-            }
-            return result;
-        }
-        const matches = yield findInPath(tool);
-        if (matches && matches.length > 0) {
-            return matches[0];
-        }
-        return '';
-    });
-}
-/**
- * Returns a list of all occurrences of the given tool on the system path.
- *
- * @returns   Promise<string[]>  the paths of the tool
- */
-function findInPath(tool) {
-    return __awaiter$2(this, void 0, void 0, function* () {
-        if (!tool) {
-            throw new Error("parameter 'tool' is required");
-        }
-        // build the list of extensions to try
-        const extensions = [];
-        if (IS_WINDOWS$1 && process.env['PATHEXT']) {
-            for (const extension of process.env['PATHEXT'].split(path.delimiter)) {
-                if (extension) {
-                    extensions.push(extension);
-                }
-            }
-        }
-        // if it's rooted, return it if exists. otherwise return empty.
-        if (isRooted(tool)) {
-            const filePath = yield tryGetExecutablePath(tool, extensions);
-            if (filePath) {
-                return [filePath];
-            }
-            return [];
-        }
-        // if any path separators, return empty
-        if (tool.includes(path.sep)) {
-            return [];
-        }
-        // build the list of directories
-        //
-        // Note, technically "where" checks the current directory on Windows. From a toolkit perspective,
-        // it feels like we should not do this. Checking the current directory seems like more of a use
-        // case of a shell, and the which() function exposed by the toolkit should strive for consistency
-        // across platforms.
-        const directories = [];
-        if (process.env.PATH) {
-            for (const p of process.env.PATH.split(path.delimiter)) {
-                if (p) {
-                    directories.push(p);
-                }
-            }
-        }
-        // find all matches
-        const matches = [];
-        for (const directory of directories) {
-            const filePath = yield tryGetExecutablePath(path.join(directory, tool), extensions);
-            if (filePath) {
-                matches.push(filePath);
-            }
-        }
-        return matches;
-    });
-}
 
-var __awaiter$1 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+(undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -28795,577 +28573,9 @@ var __awaiter$1 = (undefined && undefined.__awaiter) || function (thisArg, _argu
     });
 };
 /* eslint-disable @typescript-eslint/unbound-method */
-const IS_WINDOWS = process.platform === 'win32';
-/*
- * Class for running command line tools. Handles quoting and arg parsing in a platform agnostic way.
- */
-class ToolRunner extends events$1.EventEmitter {
-    constructor(toolPath, args, options) {
-        super();
-        if (!toolPath) {
-            throw new Error("Parameter 'toolPath' cannot be null or empty.");
-        }
-        this.toolPath = toolPath;
-        this.args = args || [];
-        this.options = options || {};
-    }
-    _debug(message) {
-        if (this.options.listeners && this.options.listeners.debug) {
-            this.options.listeners.debug(message);
-        }
-    }
-    _getCommandString(options, noPrefix) {
-        const toolPath = this._getSpawnFileName();
-        const args = this._getSpawnArgs(options);
-        let cmd = noPrefix ? '' : '[command]'; // omit prefix when piped to a second tool
-        if (IS_WINDOWS) {
-            // Windows + cmd file
-            if (this._isCmdFile()) {
-                cmd += toolPath;
-                for (const a of args) {
-                    cmd += ` ${a}`;
-                }
-            }
-            // Windows + verbatim
-            else if (options.windowsVerbatimArguments) {
-                cmd += `"${toolPath}"`;
-                for (const a of args) {
-                    cmd += ` ${a}`;
-                }
-            }
-            // Windows (regular)
-            else {
-                cmd += this._windowsQuoteCmdArg(toolPath);
-                for (const a of args) {
-                    cmd += ` ${this._windowsQuoteCmdArg(a)}`;
-                }
-            }
-        }
-        else {
-            // OSX/Linux - this can likely be improved with some form of quoting.
-            // creating processes on Unix is fundamentally different than Windows.
-            // on Unix, execvp() takes an arg array.
-            cmd += toolPath;
-            for (const a of args) {
-                cmd += ` ${a}`;
-            }
-        }
-        return cmd;
-    }
-    _processLineBuffer(data, strBuffer, onLine) {
-        try {
-            let s = strBuffer + data.toString();
-            let n = s.indexOf(os.EOL);
-            while (n > -1) {
-                const line = s.substring(0, n);
-                onLine(line);
-                // the rest of the string ...
-                s = s.substring(n + os.EOL.length);
-                n = s.indexOf(os.EOL);
-            }
-            return s;
-        }
-        catch (err) {
-            // streaming lines to console is best effort.  Don't fail a build.
-            this._debug(`error processing line. Failed with error ${err}`);
-            return '';
-        }
-    }
-    _getSpawnFileName() {
-        if (IS_WINDOWS) {
-            if (this._isCmdFile()) {
-                return process.env['COMSPEC'] || 'cmd.exe';
-            }
-        }
-        return this.toolPath;
-    }
-    _getSpawnArgs(options) {
-        if (IS_WINDOWS) {
-            if (this._isCmdFile()) {
-                let argline = `/D /S /C "${this._windowsQuoteCmdArg(this.toolPath)}`;
-                for (const a of this.args) {
-                    argline += ' ';
-                    argline += options.windowsVerbatimArguments
-                        ? a
-                        : this._windowsQuoteCmdArg(a);
-                }
-                argline += '"';
-                return [argline];
-            }
-        }
-        return this.args;
-    }
-    _endsWith(str, end) {
-        return str.endsWith(end);
-    }
-    _isCmdFile() {
-        const upperToolPath = this.toolPath.toUpperCase();
-        return (this._endsWith(upperToolPath, '.CMD') ||
-            this._endsWith(upperToolPath, '.BAT'));
-    }
-    _windowsQuoteCmdArg(arg) {
-        // for .exe, apply the normal quoting rules that libuv applies
-        if (!this._isCmdFile()) {
-            return this._uvQuoteCmdArg(arg);
-        }
-        // otherwise apply quoting rules specific to the cmd.exe command line parser.
-        // the libuv rules are generic and are not designed specifically for cmd.exe
-        // command line parser.
-        //
-        // for a detailed description of the cmd.exe command line parser, refer to
-        // http://stackoverflow.com/questions/4094699/how-does-the-windows-command-interpreter-cmd-exe-parse-scripts/7970912#7970912
-        // need quotes for empty arg
-        if (!arg) {
-            return '""';
-        }
-        // determine whether the arg needs to be quoted
-        const cmdSpecialChars = [
-            ' ',
-            '\t',
-            '&',
-            '(',
-            ')',
-            '[',
-            ']',
-            '{',
-            '}',
-            '^',
-            '=',
-            ';',
-            '!',
-            "'",
-            '+',
-            ',',
-            '`',
-            '~',
-            '|',
-            '<',
-            '>',
-            '"'
-        ];
-        let needsQuotes = false;
-        for (const char of arg) {
-            if (cmdSpecialChars.some(x => x === char)) {
-                needsQuotes = true;
-                break;
-            }
-        }
-        // short-circuit if quotes not needed
-        if (!needsQuotes) {
-            return arg;
-        }
-        // the following quoting rules are very similar to the rules that by libuv applies.
-        //
-        // 1) wrap the string in quotes
-        //
-        // 2) double-up quotes - i.e. " => ""
-        //
-        //    this is different from the libuv quoting rules. libuv replaces " with \", which unfortunately
-        //    doesn't work well with a cmd.exe command line.
-        //
-        //    note, replacing " with "" also works well if the arg is passed to a downstream .NET console app.
-        //    for example, the command line:
-        //          foo.exe "myarg:""my val"""
-        //    is parsed by a .NET console app into an arg array:
-        //          [ "myarg:\"my val\"" ]
-        //    which is the same end result when applying libuv quoting rules. although the actual
-        //    command line from libuv quoting rules would look like:
-        //          foo.exe "myarg:\"my val\""
-        //
-        // 3) double-up slashes that precede a quote,
-        //    e.g.  hello \world    => "hello \world"
-        //          hello\"world    => "hello\\""world"
-        //          hello\\"world   => "hello\\\\""world"
-        //          hello world\    => "hello world\\"
-        //
-        //    technically this is not required for a cmd.exe command line, or the batch argument parser.
-        //    the reasons for including this as a .cmd quoting rule are:
-        //
-        //    a) this is optimized for the scenario where the argument is passed from the .cmd file to an
-        //       external program. many programs (e.g. .NET console apps) rely on the slash-doubling rule.
-        //
-        //    b) it's what we've been doing previously (by deferring to node default behavior) and we
-        //       haven't heard any complaints about that aspect.
-        //
-        // note, a weakness of the quoting rules chosen here, is that % is not escaped. in fact, % cannot be
-        // escaped when used on the command line directly - even though within a .cmd file % can be escaped
-        // by using %%.
-        //
-        // the saving grace is, on the command line, %var% is left as-is if var is not defined. this contrasts
-        // the line parsing rules within a .cmd file, where if var is not defined it is replaced with nothing.
-        //
-        // one option that was explored was replacing % with ^% - i.e. %var% => ^%var^%. this hack would
-        // often work, since it is unlikely that var^ would exist, and the ^ character is removed when the
-        // variable is used. the problem, however, is that ^ is not removed when %* is used to pass the args
-        // to an external program.
-        //
-        // an unexplored potential solution for the % escaping problem, is to create a wrapper .cmd file.
-        // % can be escaped within a .cmd file.
-        let reverse = '"';
-        let quoteHit = true;
-        for (let i = arg.length; i > 0; i--) {
-            // walk the string in reverse
-            reverse += arg[i - 1];
-            if (quoteHit && arg[i - 1] === '\\') {
-                reverse += '\\'; // double the slash
-            }
-            else if (arg[i - 1] === '"') {
-                quoteHit = true;
-                reverse += '"'; // double the quote
-            }
-            else {
-                quoteHit = false;
-            }
-        }
-        reverse += '"';
-        return reverse.split('').reverse().join('');
-    }
-    _uvQuoteCmdArg(arg) {
-        // Tool runner wraps child_process.spawn() and needs to apply the same quoting as
-        // Node in certain cases where the undocumented spawn option windowsVerbatimArguments
-        // is used.
-        //
-        // Since this function is a port of quote_cmd_arg from Node 4.x (technically, lib UV,
-        // see https://github.com/nodejs/node/blob/v4.x/deps/uv/src/win/process.c for details),
-        // pasting copyright notice from Node within this function:
-        //
-        //      Copyright Joyent, Inc. and other Node contributors. All rights reserved.
-        //
-        //      Permission is hereby granted, free of charge, to any person obtaining a copy
-        //      of this software and associated documentation files (the "Software"), to
-        //      deal in the Software without restriction, including without limitation the
-        //      rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-        //      sell copies of the Software, and to permit persons to whom the Software is
-        //      furnished to do so, subject to the following conditions:
-        //
-        //      The above copyright notice and this permission notice shall be included in
-        //      all copies or substantial portions of the Software.
-        //
-        //      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        //      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        //      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        //      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        //      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-        //      FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-        //      IN THE SOFTWARE.
-        if (!arg) {
-            // Need double quotation for empty argument
-            return '""';
-        }
-        if (!arg.includes(' ') && !arg.includes('\t') && !arg.includes('"')) {
-            // No quotation needed
-            return arg;
-        }
-        if (!arg.includes('"') && !arg.includes('\\')) {
-            // No embedded double quotes or backslashes, so I can just wrap
-            // quote marks around the whole thing.
-            return `"${arg}"`;
-        }
-        // Expected input/output:
-        //   input : hello"world
-        //   output: "hello\"world"
-        //   input : hello""world
-        //   output: "hello\"\"world"
-        //   input : hello\world
-        //   output: hello\world
-        //   input : hello\\world
-        //   output: hello\\world
-        //   input : hello\"world
-        //   output: "hello\\\"world"
-        //   input : hello\\"world
-        //   output: "hello\\\\\"world"
-        //   input : hello world\
-        //   output: "hello world\\" - note the comment in libuv actually reads "hello world\"
-        //                             but it appears the comment is wrong, it should be "hello world\\"
-        let reverse = '"';
-        let quoteHit = true;
-        for (let i = arg.length; i > 0; i--) {
-            // walk the string in reverse
-            reverse += arg[i - 1];
-            if (quoteHit && arg[i - 1] === '\\') {
-                reverse += '\\';
-            }
-            else if (arg[i - 1] === '"') {
-                quoteHit = true;
-                reverse += '\\';
-            }
-            else {
-                quoteHit = false;
-            }
-        }
-        reverse += '"';
-        return reverse.split('').reverse().join('');
-    }
-    _cloneExecOptions(options) {
-        options = options || {};
-        const result = {
-            cwd: options.cwd || process.cwd(),
-            env: options.env || process.env,
-            silent: options.silent || false,
-            windowsVerbatimArguments: options.windowsVerbatimArguments || false,
-            failOnStdErr: options.failOnStdErr || false,
-            ignoreReturnCode: options.ignoreReturnCode || false,
-            delay: options.delay || 10000
-        };
-        result.outStream = options.outStream || process.stdout;
-        result.errStream = options.errStream || process.stderr;
-        return result;
-    }
-    _getSpawnOptions(options, toolPath) {
-        options = options || {};
-        const result = {};
-        result.cwd = options.cwd;
-        result.env = options.env;
-        result['windowsVerbatimArguments'] =
-            options.windowsVerbatimArguments || this._isCmdFile();
-        if (options.windowsVerbatimArguments) {
-            result.argv0 = `"${toolPath}"`;
-        }
-        return result;
-    }
-    /**
-     * Exec a tool.
-     * Output will be streamed to the live console.
-     * Returns promise with return code
-     *
-     * @param     tool     path to tool to exec
-     * @param     options  optional exec options.  See ExecOptions
-     * @returns   number
-     */
-    exec() {
-        return __awaiter$1(this, void 0, void 0, function* () {
-            // root the tool path if it is unrooted and contains relative pathing
-            if (!isRooted(this.toolPath) &&
-                (this.toolPath.includes('/') ||
-                    (IS_WINDOWS && this.toolPath.includes('\\')))) {
-                // prefer options.cwd if it is specified, however options.cwd may also need to be rooted
-                this.toolPath = path.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
-            }
-            // if the tool is only a file name, then resolve it from the PATH
-            // otherwise verify it exists (add extension on Windows if necessary)
-            this.toolPath = yield which(this.toolPath, true);
-            return new Promise((resolve, reject) => __awaiter$1(this, void 0, void 0, function* () {
-                this._debug(`exec tool: ${this.toolPath}`);
-                this._debug('arguments:');
-                for (const arg of this.args) {
-                    this._debug(`   ${arg}`);
-                }
-                const optionsNonNull = this._cloneExecOptions(this.options);
-                if (!optionsNonNull.silent && optionsNonNull.outStream) {
-                    optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os.EOL);
-                }
-                const state = new ExecState(optionsNonNull, this.toolPath);
-                state.on('debug', (message) => {
-                    this._debug(message);
-                });
-                if (this.options.cwd && !(yield exists(this.options.cwd))) {
-                    return reject(new Error(`The cwd: ${this.options.cwd} does not exist!`));
-                }
-                const fileName = this._getSpawnFileName();
-                const cp = child.spawn(fileName, this._getSpawnArgs(optionsNonNull), this._getSpawnOptions(this.options, fileName));
-                let stdbuffer = '';
-                if (cp.stdout) {
-                    cp.stdout.on('data', (data) => {
-                        if (this.options.listeners && this.options.listeners.stdout) {
-                            this.options.listeners.stdout(data);
-                        }
-                        if (!optionsNonNull.silent && optionsNonNull.outStream) {
-                            optionsNonNull.outStream.write(data);
-                        }
-                        stdbuffer = this._processLineBuffer(data, stdbuffer, (line) => {
-                            if (this.options.listeners && this.options.listeners.stdline) {
-                                this.options.listeners.stdline(line);
-                            }
-                        });
-                    });
-                }
-                let errbuffer = '';
-                if (cp.stderr) {
-                    cp.stderr.on('data', (data) => {
-                        state.processStderr = true;
-                        if (this.options.listeners && this.options.listeners.stderr) {
-                            this.options.listeners.stderr(data);
-                        }
-                        if (!optionsNonNull.silent &&
-                            optionsNonNull.errStream &&
-                            optionsNonNull.outStream) {
-                            const s = optionsNonNull.failOnStdErr
-                                ? optionsNonNull.errStream
-                                : optionsNonNull.outStream;
-                            s.write(data);
-                        }
-                        errbuffer = this._processLineBuffer(data, errbuffer, (line) => {
-                            if (this.options.listeners && this.options.listeners.errline) {
-                                this.options.listeners.errline(line);
-                            }
-                        });
-                    });
-                }
-                cp.on('error', (err) => {
-                    state.processError = err.message;
-                    state.processExited = true;
-                    state.processClosed = true;
-                    state.CheckComplete();
-                });
-                cp.on('exit', (code) => {
-                    state.processExitCode = code;
-                    state.processExited = true;
-                    this._debug(`Exit code ${code} received from tool '${this.toolPath}'`);
-                    state.CheckComplete();
-                });
-                cp.on('close', (code) => {
-                    state.processExitCode = code;
-                    state.processExited = true;
-                    state.processClosed = true;
-                    this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
-                    state.CheckComplete();
-                });
-                state.on('done', (error, exitCode) => {
-                    if (stdbuffer.length > 0) {
-                        this.emit('stdline', stdbuffer);
-                    }
-                    if (errbuffer.length > 0) {
-                        this.emit('errline', errbuffer);
-                    }
-                    cp.removeAllListeners();
-                    if (error) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(exitCode);
-                    }
-                });
-                if (this.options.input) {
-                    if (!cp.stdin) {
-                        throw new Error('child process missing stdin');
-                    }
-                    cp.stdin.end(this.options.input);
-                }
-            }));
-        });
-    }
-}
-/**
- * Convert an arg string to an array of args. Handles escaping
- *
- * @param    argString   string of arguments
- * @returns  string[]    array of arguments
- */
-function argStringToArray(argString) {
-    const args = [];
-    let inQuotes = false;
-    let escaped = false;
-    let arg = '';
-    function append(c) {
-        // we only escape double quotes.
-        if (escaped && c !== '"') {
-            arg += '\\';
-        }
-        arg += c;
-        escaped = false;
-    }
-    for (let i = 0; i < argString.length; i++) {
-        const c = argString.charAt(i);
-        if (c === '"') {
-            if (!escaped) {
-                inQuotes = !inQuotes;
-            }
-            else {
-                append(c);
-            }
-            continue;
-        }
-        if (c === '\\' && escaped) {
-            append(c);
-            continue;
-        }
-        if (c === '\\' && inQuotes) {
-            escaped = true;
-            continue;
-        }
-        if (c === ' ' && !inQuotes) {
-            if (arg.length > 0) {
-                args.push(arg);
-                arg = '';
-            }
-            continue;
-        }
-        append(c);
-    }
-    if (arg.length > 0) {
-        args.push(arg.trim());
-    }
-    return args;
-}
-class ExecState extends events$1.EventEmitter {
-    constructor(options, toolPath) {
-        super();
-        this.processClosed = false; // tracks whether the process has exited and stdio is closed
-        this.processError = '';
-        this.processExitCode = 0;
-        this.processExited = false; // tracks whether the process has exited
-        this.processStderr = false; // tracks whether stderr was written to
-        this.delay = 10000; // 10 seconds
-        this.done = false;
-        this.timeout = null;
-        if (!toolPath) {
-            throw new Error('toolPath must not be empty');
-        }
-        this.options = options;
-        this.toolPath = toolPath;
-        if (options.delay) {
-            this.delay = options.delay;
-        }
-    }
-    CheckComplete() {
-        if (this.done) {
-            return;
-        }
-        if (this.processClosed) {
-            this._setResult();
-        }
-        else if (this.processExited) {
-            this.timeout = setTimeout$1(ExecState.HandleTimeout, this.delay, this);
-        }
-    }
-    _debug(message) {
-        this.emit('debug', message);
-    }
-    _setResult() {
-        // determine whether there is an error
-        let error;
-        if (this.processExited) {
-            if (this.processError) {
-                error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
-            }
-            else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
-                error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
-            }
-            else if (this.processStderr && this.options.failOnStdErr) {
-                error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
-            }
-        }
-        // clear the timeout
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-            this.timeout = null;
-        }
-        this.done = true;
-        this.emit('done', error, this.processExitCode);
-    }
-    static HandleTimeout(state) {
-        if (state.done) {
-            return;
-        }
-        if (!state.processClosed && state.processExited) {
-            const message = `The STDIO streams did not close within ${state.delay / 1000} seconds of the exit event from process '${state.toolPath}'. This may indicate a child process inherited the STDIO streams and has not yet exited.`;
-            state._debug(message);
-        }
-        state._setResult();
-    }
-}
+process.platform === 'win32';
 
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+(undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -29374,73 +28584,6 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-/**
- * Exec a command.
- * Output will be streamed to the live console.
- * Returns promise with return code
- *
- * @param     commandLine        command to execute (can include additional args). Must be correctly escaped.
- * @param     args               optional arguments for tool. Escaping is handled by the lib.
- * @param     options            optional exec options.  See ExecOptions
- * @returns   Promise<number>    exit code
- */
-function exec(commandLine, args, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const commandArgs = argStringToArray(commandLine);
-        if (commandArgs.length === 0) {
-            throw new Error(`Parameter 'commandLine' cannot be null or empty.`);
-        }
-        // Path to tool to execute should be first arg
-        const toolPath = commandArgs[0];
-        args = commandArgs.slice(1).concat(args || []);
-        const runner = new ToolRunner(toolPath, args, options);
-        return runner.exec();
-    });
-}
-/**
- * Exec a command and get the output.
- * Output will be streamed to the live console.
- * Returns promise with the exit code and collected stdout and stderr
- *
- * @param     commandLine           command to execute (can include additional args). Must be correctly escaped.
- * @param     args                  optional arguments for tool. Escaping is handled by the lib.
- * @param     options               optional exec options.  See ExecOptions
- * @returns   Promise<ExecOutput>   exit code, stdout, and stderr
- */
-function getExecOutput(commandLine, args, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a, _b;
-        let stdout = '';
-        let stderr = '';
-        //Using string decoder covers the case where a mult-byte character is split
-        const stdoutDecoder = new StringDecoder('utf8');
-        const stderrDecoder = new StringDecoder('utf8');
-        const originalStdoutListener = (_a = options === null || options === void 0 ? void 0 : options.listeners) === null || _a === void 0 ? void 0 : _a.stdout;
-        const originalStdErrListener = (_b = options === null || options === void 0 ? void 0 : options.listeners) === null || _b === void 0 ? void 0 : _b.stderr;
-        const stdErrListener = (data) => {
-            stderr += stderrDecoder.write(data);
-            if (originalStdErrListener) {
-                originalStdErrListener(data);
-            }
-        };
-        const stdOutListener = (data) => {
-            stdout += stdoutDecoder.write(data);
-            if (originalStdoutListener) {
-                originalStdoutListener(data);
-            }
-        };
-        const listeners = Object.assign(Object.assign({}, options === null || options === void 0 ? void 0 : options.listeners), { stdout: stdOutListener, stderr: stdErrListener });
-        const exitCode = yield exec(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
-        //flush any remaining characters
-        stdout += stdoutDecoder.end();
-        stderr += stderrDecoder.end();
-        return {
-            exitCode,
-            stdout,
-            stderr
-        };
-    });
-}
 
 (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -29569,68 +28712,6 @@ function encodeOutput(value) {
     return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
-// Shared by every action that writes untrusted values into a job summary
-// table (nf-test, read-config): core.summary.addTable() writes cell data as
-// raw HTML, unescaped.
-/** Escapes text for a job summary table cell. */
-function escapeHtml(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// core.getInput() cannot tell "input absent" from "input supplied empty": it
-// reads the same environment variable either way, and returns '' for both.
-// Reading that variable directly restores the distinction.
-/**
- * Reads an input, falling back to `fallback` only when the input was not
- * supplied at all. An explicit empty value is returned as `''`, not the
- * fallback: a caller that means "empty" gets "empty".
- */
-function getInputOrDefault(name, fallback) {
-    const envName = `INPUT_${name.replace(/ /g, '_').toUpperCase()}`;
-    const raw = process.env[envName];
-    return raw === undefined ? fallback : raw.trim();
-}
-
-/**
- * Throws a clear "install it first" message unless `tool` is on PATH.
- * which()'s `check` argument defaults to false: it returns '' instead of
- * throwing when the tool is missing, so the empty-string case is checked
- * explicitly here.
- */
-async function requireOnPath(tool, installHint) {
-    if ((await which(tool)) === '') {
-        throw new Error(`${tool} is not on PATH. ${installHint}`);
-    }
-}
-
-// Shared between get-shards and nf-test: both run the nf-test binary the
-// same way. This is the security-critical part of both actions (argument
-// logging, command echoing), so it lives in one place.
-/** Fallback for the 'changed-since' input. Same value in get-shards and nf-test. */
-const DEFAULT_CHANGED_SINCE = 'HEAD^';
-const NFTEST_INSTALL_HINT = 'The calling workflow must install it before this action runs, for example with nf-core/setup-nf-test.';
-/**
- * Requires nf-test on PATH, then runs it with `args` and returns its
- * captured output.
- *
- * JSON-encodes the args before logging: it renders a newline in an
- * untrusted value (a tag, a changed-since ref) as the two characters \n, so
- * the value can't inject a workflow command into the log.
- *
- * silent: true stops @actions/exec echoing its own unencoded "[command]
- * nf-test <args>" line, which would otherwise reopen the same injection the
- * JSON-encoded log line closes. getExecOutput still captures stdout and
- * stderr regardless of this option.
- */
-async function runNfTest(args) {
-    await requireOnPath('nf-test', NFTEST_INSTALL_HINT);
-    info(`Running: nf-test ${JSON.stringify(args)}`);
-    return getExecOutput('nf-test', args, {
-        ignoreReturnCode: true,
-        silent: true
-    });
-}
-
 /**
  * Writes the job summary and never throws. core.summary.write() throws when
  * GITHUB_STEP_SUMMARY is unset or unwritable, for example a local run or
@@ -29646,79 +28727,17 @@ async function writeSummaryBestEffort() {
     }
 }
 
-// Shared predicate for every setting that must be a positive integer
-// (get-shards' max-shards, read-config's number-kind settings).
-/** Throws unless `value` is a positive integer. `label` names the value in the message. */
-function assertPositiveInteger(value, label) {
-    if (!Number.isInteger(value) || value <= 0) {
-        throw new Error(`${label} must be a positive integer. Got: ${String(value)}`);
-    }
-}
-
-// Pure, testable pieces of nf-test: turning inputs into an nf-test argument
-// array, and validating them. No I/O here.
-/** Fallback for the 'verbose' input. action.yml's declared default must match this. */
-const DEFAULT_VERBOSE = true;
-/** Throws unless `profile` is non-empty. */
-function assertProfile(profile) {
-    if (profile.trim() === '') {
-        throw new Error('profile must not be empty.');
-    }
-}
-/** Parses a shard number input. Throws unless it is a positive integer. */
-function parseShardNumber(raw, label) {
-    const value = Number(raw);
-    assertPositiveInteger(value, label);
-    return value;
-}
-/** Throws if `shard` is greater than `totalShards`. */
-function assertShardWithinTotal(shard, totalShards) {
-    if (shard > totalShards) {
-        throw new Error(`shard (${String(shard)}) must not be greater than total-shards (${String(totalShards)}).`);
-    }
-}
-/** Parses the 'verbose' input. Empty means the default. Throws on anything else. */
-function parseVerbose(raw) {
-    if (raw === '')
-        return DEFAULT_VERBOSE;
-    if (raw.toLowerCase() === 'true')
-        return true;
-    if (raw.toLowerCase() === 'false')
-        return false;
-    throw new Error(`verbose must be 'true' or 'false'. Got: ${raw}`);
-}
-// Flags this action already sets. extra-args must not repeat any of these:
-// with last-wins parsing, a repeat would override the action's own value
-// (for example, redirecting --tap away from the path this action reads).
-const RESERVED_FLAGS = [
-    '--tap',
-    '--shard',
-    '--profile',
-    '--tag',
-    '--changed-since',
-    '--verbose',
-    '--ci'
-];
-/** Throws if `args` sets a flag this action already owns, in either '--flag=value' or '--flag value' form. */
-function assertNoReservedFlags(args) {
-    for (const arg of args) {
-        const flag = arg.split('=')[0] ?? arg;
-        if (RESERVED_FLAGS.includes(flag)) {
-            throw new Error(`extra-args must not set '${flag}': this action already sets it. Got: ${arg}`);
-        }
-    }
-}
+// Pure decision logic for plan-run: which nf-test profiles a run uses, and
+// what changed-since value it passes to nf-test. No I/O here; run.ts owns
+// inputs and outputs.
 /**
- * Parses 'extra-args'. Must be a JSON array of strings, so each element
- * reaches nf-test as its own argv element. A plain string would need
- * splitting on spaces by something downstream, reopening the shell-injection
- * risk this action avoids everywhere else.
+ * Parses the 'profiles' input: read-config's 'profiles' output, a JSON array
+ * of strings. Rejects an empty list with a clear error naming the setting,
+ * rather than letting a reduced run pick a null entry from `profiles[0]`.
  */
-function parseExtraArgs(raw) {
-    if (raw.trim() === '')
-        return [];
+function parseProfiles(raw) {
     const fail = () => {
-        throw new Error(`extra-args must be a JSON array of strings, for example '["--follow-dependencies"]'. Got: ${raw}`);
+        throw new Error(`profiles must be a JSON array of strings, for example '["docker","singularity"]'. Got: ${raw}`);
     };
     let parsed;
     try {
@@ -29731,241 +28750,94 @@ function parseExtraArgs(raw) {
         !parsed.every((item) => typeof item === 'string')) {
         return fail();
     }
-    assertNoReservedFlags(parsed);
+    if (parsed.length === 0) {
+        throw new Error('profiles must not be an empty list.');
+    }
     return parsed;
 }
-/**
- * Builds the argv for `nf-test test`. Every value is its own array element,
- * so a value with shell metacharacters (for example a tag of 'foo; rm -rf /')
- * is passed through as literal text. There is no shell string to inject into.
- */
-function buildArgs(inputs, tapPath) {
-    const args = ['test', `--profile=+${inputs.profile}`];
-    if (inputs.tags)
-        args.push('--tag', inputs.tags);
-    args.push('--ci');
-    // An empty changedSince deliberately means "consider every test": omit
-    // the flag instead of passing it an empty value.
-    if (inputs.changedSince)
-        args.push('--changed-since', inputs.changedSince);
-    if (inputs.verbose)
-        args.push('--verbose');
-    args.push(`--tap=${tapPath}`);
-    args.push('--shard', `${String(inputs.shard)}/${String(inputs.totalShards)}`);
-    args.push(...inputs.extraArgs);
-    return args;
+/** A pull request whose base is a release branch: 'master' or 'main'. */
+function isReleasePullRequest(eventName, baseRef) {
+    return (eventName === 'pull_request' && (baseRef === 'master' || baseRef === 'main'));
 }
-
-// Parses TAP (Test Anything Protocol) output from nf-test. Kept separate
-// from run.ts so the parsing rules have their own tests, without mocking
-// @actions/exec or the filesystem.
-const PLAN_LINE = /^1\.\.(\d+)\b/;
-const TEST_LINE = /^(not\s+)?ok\b\s*(\d+)?\s*(.*)$/;
-const BAIL_LINE = /^Bail out!\s*(.*)$/;
-// A TAP directive: an unescaped '#' followed by SKIP or TODO. This follows
-// the TAP specification. TAP's escape for a literal '#' is '\#', which this
-// regex honours (an escaped hash never starts a directive). nf-test does
-// not escape a '#' in a test name, though, so a test whose own name contains
-// an unescaped '# SKIP' or '# TODO' is read as a directive, not as its own
-// literal text. This is a known, accepted limitation: see README.md.
-const DIRECTIVE = /(?<!\\)#\s*(SKIP|TODO)\b\s*(.*)$/i;
-/**
- * Parses nf-test's TAP output. Ignores any line that is not a plan line, a
- * test result line, or a bail-out line, so nf-test's own log lines under
- * '--verbose' (interleaved with the TAP stream) do not break parsing.
- *
- * Stops at 'Bail out!': nf-test gave up mid-run, so anything after it is not
- * reliable TAP and must not be counted.
- */
-function parseTap(output) {
-    const tests = [];
-    let planCount;
-    let bailOutReason;
-    let passed = 0;
-    let failed = 0;
-    let todo = 0;
-    let skip = 0;
-    for (const rawLine of output.split('\n')) {
-        const line = rawLine.trim();
-        if (!line)
-            continue;
-        const bail = BAIL_LINE.exec(line);
-        if (bail) {
-            bailOutReason = bail[1] ?? '';
-            break;
-        }
-        const plan = PLAN_LINE.exec(line);
-        if (plan) {
-            planCount = Number(plan[1]);
-            continue;
-        }
-        const test = TEST_LINE.exec(line);
-        if (test) {
-            const isNotOk = test[1] !== undefined;
-            const number = test[2] !== undefined ? Number(test[2]) : undefined;
-            let rest = (test[3] ?? '').replace(/^-\s*/, '');
-            // A TODO test is an expected failure: it never counts as a failure,
-            // whether it reports ok or not ok. A SKIP test is neither a pass nor
-            // a failure. Both cases override the plain ok/not-ok status.
-            let status = isNotOk ? 'fail' : 'pass';
-            const directive = DIRECTIVE.exec(rest);
-            if (directive) {
-                rest = rest.slice(0, directive.index).trim();
-                status = directive[1]?.toUpperCase() === 'TODO' ? 'todo' : 'skip';
-            }
-            // '\#' is TAP's escape for a literal '#' in a description.
-            rest = rest.replace(/\\#/g, '#');
-            if (status === 'pass')
-                passed++;
-            else if (status === 'fail')
-                failed++;
-            else if (status === 'todo')
-                todo++;
-            else
-                skip++;
-            tests.push({ number, description: rest, status });
-        }
+/** The single profile a reduced run uses: 'docker' when configured, otherwise the first entry. Order-independent. */
+function reduceProfiles(profiles) {
+    return profiles.includes('docker') ? ['docker'] : profiles.slice(0, 1);
+}
+function fullRunTrigger(eventName, baseRef) {
+    if (eventName === 'release')
+        return "the event is 'release'";
+    if (eventName === 'workflow_dispatch')
+        return "the event is 'workflow_dispatch'";
+    return `the pull request targets the release branch '${baseRef}'`;
+}
+function reducedRunTrigger(inputs) {
+    if (inputs.variant)
+        return `variant '${inputs.variant}' always runs a single profile`;
+    if (inputs.eventName === 'pull_request') {
+        return `the pull request targets '${inputs.baseRef}', not a release branch`;
     }
+    return `the event is '${inputs.eventName}'`;
+}
+/**
+ * Decides the profile set and changed-since value for a run.
+ *
+ * The full profile set runs for the default variant, on a release pull
+ * request (base 'master' or 'main'), or on a 'release' or 'workflow_dispatch'
+ * event. Every other case (an ordinary pull request against 'dev', or any
+ * variant such as 'arm' or 'gpu') gets a single profile: 'docker' when
+ * configured, otherwise the first configured profile.
+ */
+function planRun(inputs) {
+    if (inputs.profiles.length === 0) {
+        throw new Error('ci.profiles must not be an empty list.');
+    }
+    const fullRun = inputs.variant === '' &&
+        (isReleasePullRequest(inputs.eventName, inputs.baseRef) ||
+            inputs.eventName === 'release' ||
+            inputs.eventName === 'workflow_dispatch');
+    if (fullRun) {
+        return {
+            testProfiles: inputs.profiles,
+            changedSince: changedSinceFor(inputs.eventName),
+            reason: `Full profile set: ${fullRunTrigger(inputs.eventName, inputs.baseRef)}.`
+        };
+    }
+    const testProfiles = reduceProfiles(inputs.profiles);
     return {
-        tests,
-        planCount,
-        bailOutReason,
-        counts: {
-            total: tests.length,
-            passed,
-            failed,
-            todo,
-            skip,
-            skipped: todo + skip
-        }
+        testProfiles,
+        changedSince: changedSinceFor(inputs.eventName),
+        reason: `Reduced to one profile ('${testProfiles.join(', ')}'): ${reducedRunTrigger(inputs)}.`
     };
+}
+/** '' (test everything) for 'release' and 'workflow_dispatch', 'HEAD^' otherwise. */
+function changedSinceFor(eventName) {
+    return eventName === 'release' || eventName === 'workflow_dispatch'
+        ? ''
+        : 'HEAD^';
 }
 
 function readInputs() {
-    const profile = getInput('profile', { required: true });
-    assertProfile(profile);
-    const shard = parseShardNumber(getInput('shard', { required: true }), 'shard');
-    const totalShards = parseShardNumber(getInput('total-shards', { required: true }), 'total-shards');
-    assertShardWithinTotal(shard, totalShards);
     return {
-        profile,
-        shard,
-        totalShards,
-        tags: getInput('tags'),
-        changedSince: getInputOrDefault('changed-since', DEFAULT_CHANGED_SINCE),
-        verbose: parseVerbose(getInput('verbose')),
-        extraArgs: parseExtraArgs(getInput('extra-args'))
+        profiles: parseProfiles(getInput('profiles', { required: true })),
+        variant: getInput('variant'),
+        eventName: getInput('event-name', { required: true }),
+        baseRef: getInput('base-ref')
     };
 }
-// Node's fs errors always carry a string .code, regardless of which realm
-// constructed them. Checking that shape, rather than `instanceof Error`,
-// avoids a cross-realm false negative under Jest's experimental VM modules.
-function isEnoent(error) {
-    return (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'ENOENT');
-}
-/**
- * Reads the TAP file nf-test wrote. Empty string if nf-test crashed before
- * writing it at all: that is a "no parseable TAP" condition, not a crash of
- * this action.
- */
-function readTapFile(tapPath) {
-    try {
-        return readFileSync(tapPath, 'utf8');
-    }
-    catch (error) {
-        if (isEnoent(error))
-            return '';
-        throw error;
-    }
-}
-const STATUS_ICON = {
-    pass: '✅',
-    fail: '❌',
-    skip: '⏭️',
-    todo: '📝'
-};
-function writeSummary(parsed, counts, inputs) {
+function writeSummary(plan) {
     summary
-        .addHeading('nf-test results', 3)
-        .addRaw(`${String(counts.passed)} passed, ${String(counts.failed)} failed, ${String(counts.skipped)} skipped, ${String(counts.total)} total.`, true)
-        .addTable([
-        [
-            { data: 'Status', header: true },
-            { data: 'Test', header: true },
-            { data: 'Profile', header: true },
-            { data: 'Shard', header: true }
-        ],
-        ...parsed.tests.map((test) => [
-            STATUS_ICON[test.status],
-            escapeHtml(test.description || `#${String(test.number ?? '?')}`),
-            escapeHtml(inputs.profile),
-            escapeHtml(`${String(inputs.shard)}/${String(inputs.totalShards)}`)
-        ])
-    ]);
+        .addHeading('plan-run: run plan', 3)
+        .addRaw(`Profiles: ${plan.testProfiles.join(', ')}. Changed-since: ${plan.changedSince || '(everything)'}. ${plan.reason}`, true);
     return writeSummaryBestEffort();
 }
-/** Runs one nf-test shard, parses its TAP output, and reports the result. */
+/** Decides the test profiles and changed-since value for this run, from the workflow's inputs. */
 async function run() {
     const inputs = readInputs();
-    // A temp directory the action controls, not the working directory: this
-    // action does not own the working directory's lifecycle or contents.
-    const tapDir = await mkdtemp(join(tmpdir(), 'nf-test-'));
-    const tapPath = join(tapDir, 'test.tap');
-    const args = buildArgs(inputs, tapPath);
-    const { stdout, stderr, exitCode } = await runNfTest(args);
-    const parsed = parseTap(readTapFile(tapPath));
-    const counts = parsed.counts;
-    // Set every output before checking for failure below. The zero-test case
-    // is exactly where a caller most wants this detail (a stuck shard, a
-    // renamed nf-test flag), so it must not be the one path that leaves every
-    // output unset.
-    setOutput('total', encodeOutput(counts.total));
-    setOutput('passed', encodeOutput(counts.passed));
-    setOutput('failed', encodeOutput(counts.failed));
-    setOutput('todo', encodeOutput(counts.todo));
-    setOutput('skip', encodeOutput(counts.skip));
-    setOutput('skipped', encodeOutput(counts.skipped));
-    setOutput('tap-path', tapPath);
-    setOutput('exit-code', encodeOutput(exitCode));
-    setOutput('bailed-out', encodeOutput(parsed.bailOutReason !== undefined));
-    // A run that tests nothing must never look like a pass, whatever nf-test's
-    // exit code was: there is no legitimate zero-test path. get-shards caps
-    // the shard count at the number of tests it found, and its has-tests
-    // output stops the matrix job from starting at all when there are none.
-    // A shard that reaches this point with zero tests means something is
-    // broken upstream (for example a config error or a renamed nf-test flag),
-    // not an empty shard that should be allowed to pass.
-    if (counts.total === 0) {
-        throw new Error(`nf-test reported zero tests (exit code ${String(exitCode)}). A run that tests nothing is always treated as a failure. Output:\n${stdout}${stderr}`);
-    }
-    await writeSummary(parsed, counts, inputs);
-    const problems = [];
-    if (parsed.bailOutReason !== undefined) {
-        problems.push(`nf-test bailed out: ${parsed.bailOutReason || '(no reason given)'}`);
-    }
-    // The plan line promised more tests than were reported: the run was cut
-    // short, for example by a crash mid-suite. Treat that as a failure.
-    // Silently accepting the executed subset would hide the missing tests,
-    // the same reasoning as the "no parseable TAP" check above.
-    if (parsed.planCount !== undefined && parsed.planCount !== counts.total) {
-        problems.push(`nf-test's plan announced ${String(parsed.planCount)} test(s) but only ${String(counts.total)} were reported.`);
-    }
-    if (counts.failed > 0) {
-        problems.push(`${String(counts.failed)} of ${String(counts.total)} test(s) failed.`);
-    }
-    if (exitCode !== 0) {
-        problems.push(`nf-test exited with code ${String(exitCode)}.`);
-    }
-    // Include the captured output on the failure path: it carries nf-test's
-    // own diagnostics (a Nextflow stack trace, an error report path). Safe to
-    // throw unescaped here, unlike core.info: core.setFailed() (via
-    // runAction) reports it through core.error(), which escapes it.
-    if (problems.length > 0) {
-        throw new Error(`${problems.join(' ')} Output:\n${stdout}${stderr}`);
-    }
+    const plan = planRun(inputs);
+    info(plan.reason);
+    setOutput('test-profiles', encodeOutput(plan.testProfiles));
+    setOutput('changed-since', plan.changedSince);
+    await writeSummary(plan);
 }
 
 runAction(run);

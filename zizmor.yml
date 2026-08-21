@@ -1,6 +1,17 @@
 # See: https://docs.zizmor.sh/configuration/
 
 rules:
+  unpinned-uses:
+    config:
+      policies:
+        # nf-core, nextflow-io and seqeralabs are nf-core-controlled orgs. This
+        # repo pins their actions to a major tag, the same as a pipeline pins
+        # this repo. See README.md's "Tag policy" section.
+        nf-core/*: ref-pin
+        nextflow-io/*: ref-pin
+        seqeralabs/*: ref-pin
+        '*': hash-pin
+
   artipacked:
     ignore:
       # The tag job pushes the release tag and the moved major tag with the

@@ -189,6 +189,24 @@ describe('run', () => {
     expect(outputValues()['runner']).toBe('16cpu-linux-x64')
   })
 
+  it('fails with a clear message naming the setting and the file when runner is blank', async () => {
+    writeFileSync(
+      join(workDir, '.nf-core.yml'),
+      ['ci:', '  runner: ""'].join('\n')
+    )
+    await expect(run()).rejects.toThrow(/ci\.runner.*must not be empty/s)
+    expect(setOutput).not.toHaveBeenCalled()
+  })
+
+  it('fails with a clear message naming the setting and the file when profiles is an empty list', async () => {
+    writeFileSync(
+      join(workDir, '.nf-core.yml'),
+      ['ci:', '  profiles: []'].join('\n')
+    )
+    await expect(run()).rejects.toThrow(/ci\.profiles.*empty list/s)
+    expect(setOutput).not.toHaveBeenCalled()
+  })
+
   it('resolves config-file relative to the workspace', async () => {
     writeFileSync(
       join(workDir, 'custom.yml'),
@@ -199,5 +217,18 @@ describe('run', () => {
     )
     await run()
     expect(outputValues()['runner']).toBe('gpu-runner')
+  })
+
+  it('escapes a value from .nf-core.yml in the summary table', async () => {
+    writeFileSync(
+      join(workDir, '.nf-core.yml'),
+      ['ci:', "  runner: '<img src=x onerror=alert(1)> & co'"].join('\n')
+    )
+    await run()
+
+    const [rows] = summary.addTable!.mock.calls[0] as [unknown[][]]
+    const runnerRow = rows.find((row) => row[0] === 'runner') as string[]
+    expect(runnerRow[1]).toBe('&lt;img src=x onerror=alert(1)&gt; &amp; co')
+    expect(runnerRow[1]).not.toContain('<img')
   })
 })

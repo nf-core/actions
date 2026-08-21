@@ -35,6 +35,7 @@ const listSetting = settingByOutput('profiles')
 const numberSetting = settingByOutput('max-shards')
 const readOnlySetting = settingByOutput('pipeline-name')
 const nfCoreVersionSetting = settingByOutput('nf-core-version')
+const runnerSetting = settingByOutput('runner')
 
 /** Not a real registry setting; exercises a nested configPath. */
 const templateVersionSetting = defineSetting({
@@ -245,6 +246,41 @@ describe('kind: number requires a positive integer', () => {
     expect(() => resolveSetting(numberSetting, undefined)).toThrow(
       /positive integer/
     )
+  })
+})
+
+describe('kind: string-list requires a non-empty list', () => {
+  it('rejects an empty list from the config file, naming the setting and the file', () => {
+    expect(() => resolveSetting(listSetting, { ci: { profiles: [] } })).toThrow(
+      /ci\.profiles.*empty list/s
+    )
+  })
+
+  it('rejects an empty list from the input', () => {
+    getInput.mockReturnValue('[]')
+    expect(() => resolveSetting(listSetting, undefined)).toThrow(
+      /profiles.*empty list/s
+    )
+  })
+})
+
+describe('runner must not be blank', () => {
+  it('rejects an empty string from the config file, naming the setting and the file', () => {
+    expect(() => resolveSetting(runnerSetting, { ci: { runner: '' } })).toThrow(
+      /ci\.runner.*must not be empty/s
+    )
+  })
+
+  it('rejects a whitespace-only string from the config file', () => {
+    expect(() =>
+      resolveSetting(runnerSetting, { ci: { runner: '   ' } })
+    ).toThrow(/must not be empty/)
+  })
+
+  it('a blank runner input is treated as not set, and falls through to the file value', () => {
+    getInput.mockReturnValue('   ')
+    const result = resolveSetting(runnerSetting, { ci: { runner: '8cpu' } })
+    expect(result).toEqual({ value: '8cpu', source: 'file' })
   })
 })
 
