@@ -33,6 +33,10 @@ import require$$1$5 from 'node:dns';
 import require$$5$3, { StringDecoder } from 'string_decoder';
 import * as child from 'child_process';
 import { setTimeout as setTimeout$1 } from 'timers';
+import { readFileSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -29643,90 +29647,313 @@ function assertPositiveInteger(value, label) {
     }
 }
 
-// Pure, testable pieces of get-shards: turning inputs into an nf-test
-// argument array, and validating max-shards. No I/O here.
-/** Fallback for the 'profile' input. action.yml's declared default must match this. */
-const DEFAULT_PROFILE = 'docker';
+// Pure, testable pieces of nf-test: turning inputs into an nf-test argument
+// array, and validating them. No I/O here.
+/** Fallback for the 'verbose' input. action.yml's declared default must match this. */
+const DEFAULT_VERBOSE = true;
+/** Throws unless `profile` is non-empty. */
+function assertProfile(profile) {
+    if (profile.trim() === '') {
+        throw new Error('profile must not be empty.');
+    }
+}
+/** Parses a shard number input. Throws unless it is a positive integer. */
+function parseShardNumber(raw, label) {
+    const value = Number(raw);
+    assertPositiveInteger(value, label);
+    return value;
+}
+/** Throws if `shard` is greater than `totalShards`. */
+function assertShardWithinTotal(shard, totalShards) {
+    if (shard > totalShards) {
+        throw new Error(`shard (${String(shard)}) must not be greater than total-shards (${String(totalShards)}).`);
+    }
+}
+/** Parses the 'verbose' input. Empty means the default. Throws on anything else. */
+function parseVerbose(raw) {
+    if (raw === '')
+        return DEFAULT_VERBOSE;
+    if (raw.toLowerCase() === 'true')
+        return true;
+    if (raw.toLowerCase() === 'false')
+        return false;
+    throw new Error(`verbose must be 'true' or 'false'. Got: ${raw}`);
+}
+// Flags this action already sets. extra-args must not repeat any of these:
+// with last-wins parsing, a repeat would override the action's own value
+// (for example, redirecting --tap away from the path this action reads).
+const RESERVED_FLAGS = [
+    '--tap',
+    '--shard',
+    '--profile',
+    '--tag',
+    '--changed-since',
+    '--verbose',
+    '--ci'
+];
+/** Throws if `args` sets a flag this action already owns, in either '--flag=value' or '--flag value' form. */
+function assertNoReservedFlags(args) {
+    for (const arg of args) {
+        const flag = arg.split('=')[0] ?? arg;
+        if (RESERVED_FLAGS.includes(flag)) {
+            throw new Error(`extra-args must not set '${flag}': this action already sets it. Got: ${arg}`);
+        }
+    }
+}
 /**
- * Builds the argv for nf-test's dry run. Every value is its own array
- * element, so a value with shell metacharacters (for example a tag of
- * 'foo; rm -rf /') is passed through as literal text. There is no shell
- * string to inject into.
+ * Parses 'extra-args'. Must be a JSON array of strings, so each element
+ * reaches nf-test as its own argv element. A plain string would need
+ * splitting on spaces by something downstream, reopening the shell-injection
+ * risk this action avoids everywhere else.
  */
-function buildArgs(inputs) {
-    const args = ['test', '--profile', `+${inputs.profile}`];
+function parseExtraArgs(raw) {
+    if (raw.trim() === '')
+        return [];
+    const fail = () => {
+        throw new Error(`extra-args must be a JSON array of strings, for example '["--follow-dependencies"]'. Got: ${raw}`);
+    };
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    }
+    catch {
+        return fail();
+    }
+    if (!Array.isArray(parsed) ||
+        !parsed.every((item) => typeof item === 'string')) {
+        return fail();
+    }
+    assertNoReservedFlags(parsed);
+    return parsed;
+}
+/**
+ * Builds the argv for `nf-test test`. Every value is its own array element,
+ * so a value with shell metacharacters (for example a tag of 'foo; rm -rf /')
+ * is passed through as literal text. There is no shell string to inject into.
+ */
+function buildArgs(inputs, tapPath) {
+    const args = ['test', `--profile=+${inputs.profile}`];
     if (inputs.tags)
         args.push('--tag', inputs.tags);
-    args.push('--dry-run', '--ci');
+    args.push('--ci');
     // An empty changedSince deliberately means "consider every test": omit
     // the flag instead of passing it an empty value.
     if (inputs.changedSince)
         args.push('--changed-since', inputs.changedSince);
+    if (inputs.verbose)
+        args.push('--verbose');
+    args.push(`--tap=${tapPath}`);
+    args.push('--shard', `${String(inputs.shard)}/${String(inputs.totalShards)}`);
+    args.push(...inputs.extraArgs);
     return args;
 }
-/** Parses the 'max-shards' input. Throws unless it is a positive integer. */
-function parseMaxShards(raw) {
-    const value = Number(raw);
-    assertPositiveInteger(value, 'max-shards');
-    return value;
-}
 
-// Parses nf-test's dry-run output. Kept separate from run.ts so the parsing
-// rules have their own tests, without mocking @actions/exec.
-const NO_TESTS_MARKER = 'No tests to execute';
-const EXECUTED_PATTERN = /Executed (\d+) tests?/;
+// Parses TAP (Test Anything Protocol) output from nf-test. Kept separate
+// from run.ts so the parsing rules have their own tests, without mocking
+// @actions/exec or the filesystem.
+const PLAN_LINE = /^1\.\.(\d+)\b/;
+const TEST_LINE = /^(not\s+)?ok\b\s*(\d+)?\s*(.*)$/;
+const BAIL_LINE = /^Bail out!\s*(.*)$/;
+// An unescaped '#' introduces a directive. TAP escapes a literal '#' in a
+// description as '\#', so an escaped hash never starts one.
+const DIRECTIVE = /(?<!\\)#\s*(SKIP|TODO)\b\s*(.*)$/i;
 /**
- * Reads the number of tests nf-test would run from its dry-run output.
- * Zero covers both 'No tests to execute' and an explicit 'Executed 0 tests'.
- * Throws if the output matches neither shape, so a format change fails loudly
- * instead of silently producing an empty matrix.
+ * Parses nf-test's TAP output. Ignores any line that is not a plan line, a
+ * test result line, or a bail-out line, so nf-test's own log lines under
+ * '--verbose' (interleaved with the TAP stream) do not break parsing.
+ *
+ * Stops at 'Bail out!': nf-test gave up mid-run, so anything after it is not
+ * reliable TAP and must not be counted.
  */
-function parseDryRunOutput(output) {
-    if (output.includes(NO_TESTS_MARKER))
-        return 0;
-    const match = EXECUTED_PATTERN.exec(output);
-    if (!match) {
-        throw new Error(`Could not read a test count from nf-test's dry-run output. ` +
-            `Expected a line containing 'Executed N tests' or '${NO_TESTS_MARKER}'. Got:\n${output}`);
+function parseTap(output) {
+    const tests = [];
+    let planCount;
+    let bailOutReason;
+    let passed = 0;
+    let failed = 0;
+    let todo = 0;
+    let skip = 0;
+    for (const rawLine of output.split('\n')) {
+        const line = rawLine.trim();
+        if (!line)
+            continue;
+        const bail = BAIL_LINE.exec(line);
+        if (bail) {
+            bailOutReason = bail[1] ?? '';
+            break;
+        }
+        const plan = PLAN_LINE.exec(line);
+        if (plan) {
+            planCount = Number(plan[1]);
+            continue;
+        }
+        const test = TEST_LINE.exec(line);
+        if (test) {
+            const isNotOk = test[1] !== undefined;
+            const number = test[2] !== undefined ? Number(test[2]) : undefined;
+            let rest = (test[3] ?? '').replace(/^-\s*/, '');
+            // A TODO test is an expected failure: it never counts as a failure,
+            // whether it reports ok or not ok. A SKIP test is neither a pass nor
+            // a failure. Both cases override the plain ok/not-ok status.
+            let status = isNotOk ? 'fail' : 'pass';
+            const directive = DIRECTIVE.exec(rest);
+            if (directive) {
+                rest = rest.slice(0, directive.index).trim();
+                status = directive[1]?.toUpperCase() === 'TODO' ? 'todo' : 'skip';
+            }
+            // '\#' is TAP's escape for a literal '#' in a description.
+            rest = rest.replace(/\\#/g, '#');
+            if (status === 'pass')
+                passed++;
+            else if (status === 'fail')
+                failed++;
+            else if (status === 'todo')
+                todo++;
+            else
+                skip++;
+            tests.push({ number, description: rest, status });
+        }
     }
-    return Number(match[1]);
+    return {
+        tests,
+        planCount,
+        bailOutReason,
+        counts: {
+            total: tests.length,
+            passed,
+            failed,
+            todo,
+            skip,
+            skipped: todo + skip
+        }
+    };
 }
 
 function readInputs() {
+    const profile = getInput('profile', { required: true });
+    assertProfile(profile);
+    const shard = parseShardNumber(getInput('shard', { required: true }), 'shard');
+    const totalShards = parseShardNumber(getInput('total-shards', { required: true }), 'total-shards');
+    assertShardWithinTotal(shard, totalShards);
     return {
-        maxShards: parseMaxShards(getInput('max-shards', { required: true })),
-        profile: getInput('profile') || DEFAULT_PROFILE,
+        profile,
+        shard,
+        totalShards,
         tags: getInput('tags'),
-        changedSince: getInputOrDefault('changed-since', DEFAULT_CHANGED_SINCE)
+        changedSince: getInputOrDefault('changed-since', DEFAULT_CHANGED_SINCE),
+        verbose: parseVerbose(getInput('verbose')),
+        extraArgs: parseExtraArgs(getInput('extra-args'))
     };
 }
-function writeSummary(testCount, shardCount, maxShards) {
+// Node's fs errors always carry a string .code, regardless of which realm
+// constructed them. Checking that shape, rather than `instanceof Error`,
+// avoids a cross-realm false negative under Jest's experimental VM modules.
+function isEnoent(error) {
+    return (typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'ENOENT');
+}
+/**
+ * Reads the TAP file nf-test wrote. Empty string if nf-test crashed before
+ * writing it at all: that is a "no parseable TAP" condition, not a crash of
+ * this action.
+ */
+function readTapFile(tapPath) {
+    try {
+        return readFileSync(tapPath, 'utf8');
+    }
+    catch (error) {
+        if (isEnoent(error))
+            return '';
+        throw error;
+    }
+}
+const STATUS_ICON = {
+    pass: '✅',
+    fail: '❌',
+    skip: '⏭️',
+    todo: '📝'
+};
+/** Escapes text for a job summary table cell. addTable() writes cell data as raw HTML, unescaped. */
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function writeSummary(parsed, counts, inputs) {
     summary
-        .addHeading('get-shards: shard plan', 3)
-        .addRaw(`nf-test would run ${String(testCount)} test(s). Using ${String(shardCount)} shard(s) (cap: ${String(maxShards)}).`, true);
+        .addHeading('nf-test results', 3)
+        .addRaw(`${String(counts.passed)} passed, ${String(counts.failed)} failed, ${String(counts.skipped)} skipped, ${String(counts.total)} total.`, true)
+        .addTable([
+        [
+            { data: 'Status', header: true },
+            { data: 'Test', header: true },
+            { data: 'Profile', header: true },
+            { data: 'Shard', header: true }
+        ],
+        ...parsed.tests.map((test) => [
+            STATUS_ICON[test.status],
+            escapeHtml(test.description || `#${String(test.number ?? '?')}`),
+            inputs.profile,
+            `${String(inputs.shard)}/${String(inputs.totalShards)}`
+        ])
+    ]);
     return writeSummaryBestEffort();
 }
-/** Runs nf-test's dry run, parses the test count, and publishes the shard matrix. */
+/** Runs one nf-test shard, parses its TAP output, and reports the result. */
 async function run() {
     const inputs = readInputs();
-    const args = buildArgs(inputs);
+    // A temp directory the action controls, not the working directory: this
+    // action does not own the working directory's lifecycle or contents.
+    const tapDir = await mkdtemp(join(tmpdir(), 'nf-test-'));
+    const tapPath = join(tapDir, 'test.tap');
+    const args = buildArgs(inputs, tapPath);
     const { stdout, stderr, exitCode } = await runNfTest(args);
+    const parsed = parseTap(readTapFile(tapPath));
+    const counts = parsed.counts;
+    // A run that tests nothing must never look like a pass, whatever nf-test's
+    // exit code was: there is no legitimate zero-test path. get-shards caps
+    // the shard count at the number of tests it found, and its has-tests
+    // output stops the matrix job from starting at all when there are none.
+    // A shard that reaches this point with zero tests means something is
+    // broken upstream (for example a config error or a renamed nf-test flag),
+    // not an empty shard that should be allowed to pass.
+    if (counts.total === 0) {
+        throw new Error(`nf-test reported zero tests (exit code ${String(exitCode)}). A run that tests nothing is always treated as a failure. Output:\n${stdout}${stderr}`);
+    }
+    setOutput('total', encodeOutput(counts.total));
+    setOutput('passed', encodeOutput(counts.passed));
+    setOutput('failed', encodeOutput(counts.failed));
+    setOutput('todo', encodeOutput(counts.todo));
+    setOutput('skip', encodeOutput(counts.skip));
+    setOutput('skipped', encodeOutput(counts.skipped));
+    setOutput('tap-path', tapPath);
+    setOutput('exit-code', encodeOutput(exitCode));
+    setOutput('bailed-out', encodeOutput(parsed.bailOutReason !== undefined));
+    await writeSummary(parsed, counts, inputs);
+    const problems = [];
+    if (parsed.bailOutReason !== undefined) {
+        problems.push(`nf-test bailed out: ${parsed.bailOutReason || '(no reason given)'}`);
+    }
+    // The plan line promised more tests than were reported: the run was cut
+    // short, for example by a crash mid-suite. Treat that as a failure.
+    // Silently accepting the executed subset would hide the missing tests,
+    // the same reasoning as the "no parseable TAP" check above.
+    if (parsed.planCount !== undefined && parsed.planCount !== counts.total) {
+        problems.push(`nf-test's plan announced ${String(parsed.planCount)} test(s) but only ${String(counts.total)} were reported.`);
+    }
+    if (counts.failed > 0) {
+        problems.push(`${String(counts.failed)} of ${String(counts.total)} test(s) failed.`);
+    }
     if (exitCode !== 0) {
-        throw new Error(`nf-test exited with code ${String(exitCode)}. Output:\n${stdout}${stderr}`);
+        problems.push(`nf-test exited with code ${String(exitCode)}.`);
     }
-    const testCount = parseDryRunOutput(stdout);
-    const shardCount = Math.min(testCount, inputs.maxShards);
-    const shards = Array.from({ length: shardCount }, (_, i) => i + 1);
-    if (testCount === 0) {
-        info('No related tests found.');
+    // Include the captured output on the failure path: it carries nf-test's
+    // own diagnostics (a Nextflow stack trace, an error report path). Safe to
+    // throw unescaped here, unlike core.info: core.setFailed() (via
+    // runAction) reports it through core.error(), which escapes it.
+    if (problems.length > 0) {
+        throw new Error(`${problems.join(' ')} Output:\n${stdout}${stderr}`);
     }
-    else {
-        info(`Found ${String(testCount)} test(s). Using ${String(shardCount)} shard(s).`);
-    }
-    setOutput('shards', encodeOutput(shards));
-    setOutput('total-shards', encodeOutput(shardCount));
-    setOutput('has-tests', encodeOutput(testCount > 0));
-    await writeSummary(testCount, shardCount, inputs.maxShards);
 }
 
 runAction(run);

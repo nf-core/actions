@@ -24,10 +24,10 @@ inputs:
     required: false
   changed-since:
     description: >-
-      Git ref for nf-test's '--changed-since' argument. An empty value omits the
-      flag, so every test is considered.
+      Git ref for nf-test's '--changed-since' argument. Defaults to 'HEAD^' when
+      not supplied at all. An explicit empty value omits the flag, so every test
+      is considered.
     required: false
-    default: HEAD^
 
 outputs:
   shards:

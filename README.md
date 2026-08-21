@@ -116,7 +116,11 @@ jobs:
       total-shards: ${{ steps.get-shards.outputs.total-shards }}
       has-tests: ${{ steps.get-shards.outputs.has-tests }}
     steps:
+      # fetch-depth: 0 fetches full history: nf-test's --changed-since needs
+      # HEAD^ to exist to find what changed.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: nf-core/setup-nf-test@v1
       - id: get-shards
         uses: nf-core/actions/actions/get-shards@v1
@@ -170,6 +174,100 @@ handle these differences:
 - The `paths` input is gone. The vendored action never used it.
 - `get-shards` does not install nf-test. Add a step such as
   `nf-core/setup-nf-test` before it in the workflow.
+
+## The `nf-test` action
+
+The [`nf-test`](actions/nf-test) action runs one shard of a pipeline's nf-test
+suite and reports the result. Like `get-shards`, it does not install any tool:
+the calling workflow must already have `nf-test` on `PATH`, and, for a real
+pipeline run, Nextflow, Python, and a container engine too.
+
+```yaml
+# .github/workflows/nf-test.yml in a pipeline repo
+name: nf-test
+
+on:
+  pull_request:
+
+jobs:
+  get-shards:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.get-shards.outputs.shards }}
+      total-shards: ${{ steps.get-shards.outputs.total-shards }}
+      has-tests: ${{ steps.get-shards.outputs.has-tests }}
+    steps:
+      # fetch-depth: 0 fetches full history: nf-test's --changed-since needs
+      # HEAD^ to exist to find what changed.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: nf-core/setup-nextflow@v1
+      - uses: nf-core/setup-nf-test@v1
+      - id: get-shards
+        uses: nf-core/actions/actions/get-shards@v1
+        with:
+          max-shards: 10
+          changed-since: HEAD^
+
+  test:
+    needs: get-shards
+    if: needs.get-shards.outputs.has-tests == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: ${{ fromJSON(needs.get-shards.outputs.shards) }}
+    steps:
+      # fetch-depth: 0 fetches full history: nf-test's --changed-since needs
+      # HEAD^ to exist to find what changed.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: nf-core/setup-nextflow@v1
+      - uses: nf-core/setup-nf-test@v1
+      - uses: nf-core/actions/actions/nf-test@v1
+        with:
+          profile: docker
+          shard: ${{ matrix.shard }}
+          total-shards: ${{ needs.get-shards.outputs.total-shards }}
+```
+
+Every value nf-test needs is passed to the process as its own argument, the same
+as in `get-shards`: a `tags` value with shell metacharacters cannot inject a
+shell command. TAP output is parsed in TypeScript, not a bash `while` loop, so a
+test name with an unusual character cannot break the summary table: it is
+HTML-escaped before it reaches the table too. The action fails when any test
+failed, or when nf-test itself exited non-zero (for example a Nextflow crash),
+even if every test that did run passed. It also fails, instead of reporting a
+hollow pass, when nf-test reports zero tests, whatever its exit code, and when
+the TAP plan line promises more tests than were actually reported: both mean the
+run tested nothing or was cut short. There is no legitimate zero-test path for
+this action: `get-shards` already caps the shard count at the number of tests it
+found, and stops the matrix job outright when there are none.
+
+`extra-args` accepts a JSON array of strings, for example
+`'["--follow-dependencies"]'`, so a pipeline with unusual nf-test needs can pass
+an extra argument without forking the calling workflow. A plain string is
+rejected, because it would need re-splitting on spaces by something downstream,
+reopening the same shell-injection risk this action avoids everywhere else. An
+element that sets a flag this action already owns (`--tap`, `--shard`,
+`--profile`, `--tag`, `--changed-since`, `--verbose`, `--ci`) is rejected too,
+so `extra-args` cannot redirect the TAP report away from the path this action
+reads or otherwise override the action's own contract.
+
+### Migrating from the vendored action
+
+A pipeline switching from the old vendored composite action to `nf-test` must
+handle these differences:
+
+- The `paths` input is gone. The vendored action never used it.
+- Tool setup moved to the calling workflow. The vendored action installed
+  Nextflow, Python, nf-test, and the profile's container engine itself; this
+  action assumes they are already on `PATH` when it runs.
+- The `sudo rm -rf /home/ubuntu/tests/` cleanup step is gone. It hardcoded a
+  specific runner user's home directory, and this action does not own the
+  working directory's lifecycle. Runner hygiene, if still needed, belongs in the
+  calling workflow.
 
 ## Tag policy
 

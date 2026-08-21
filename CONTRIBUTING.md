@@ -47,3 +47,19 @@ the updated `actions/*/dist/index.js` files onto that branch yourself.
 
 `rollup.config.ts` discovers every `src/actions/*/index.ts` automatically; no
 build config changes are needed for a new action.
+
+## Conventions
+
+Lessons from past stage reviews, so a new stage does not repeat them:
+
+- Move shared code to `src/lib/` as soon as a second action needs it. Do not let
+  two actions carry byte-for-byte copies of the same logic.
+- Do not re-prove a pure function through mocks in an orchestration test. Keep
+  one or two wiring tests, and test the logic itself directly, on the pure
+  function.
+- A run that tests nothing must never report success.
+- Never interpolate an input into a shell string; build an argument array. Log
+  untrusted values encoded, and do not let a library echo them unescaped.
+- Validate a README workflow example with actionlint, and also reason through it
+  by hand: actionlint checks syntax, not whether the workflow would actually
+  work.

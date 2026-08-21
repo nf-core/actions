@@ -6,9 +6,6 @@ import { assertPositiveInteger } from '../../lib/positive-integer.js'
 /** Fallback for the 'profile' input. action.yml's declared default must match this. */
 export const DEFAULT_PROFILE = 'docker'
 
-/** Fallback for the 'changed-since' input. action.yml's declared default must match this. */
-export const DEFAULT_CHANGED_SINCE = 'HEAD^'
-
 export interface DryRunInputs {
   profile: string
   tags: string
