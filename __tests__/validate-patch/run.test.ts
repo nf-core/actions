@@ -38,8 +38,20 @@ jest.unstable_mockModule('@actions/core', () => ({
 
 const { run } = await import('../../src/actions/validate-patch/run.js')
 
+// These tests run real git against a throwaway repository, because git's own
+// behaviour on a real tree is what is under test. Ignore the developer's
+// global and system config so the result cannot depend on it. Commit signing
+// matters most: a machine that signs by default makes every commit here wait
+// on a signing agent, and fail when that agent does.
 function git(cwd: string, args: string[]): void {
-  execFileSync('git', args, { cwd })
+  execFileSync('git', args, {
+    cwd,
+    env: {
+      ...process.env,
+      GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_CONFIG_SYSTEM: '/dev/null'
+    }
+  })
 }
 
 function outputValues(): Record<string, string> {

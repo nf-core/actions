@@ -49,7 +49,7 @@ simplification and correctness before the next stage starts.
 | 6   | `linting.yml` workflow                      | nf-core lint, prettier, editorconfig, plus the Nextflow lint check.                                                                                                              | Done        |
 | 7   | `pr-comment.yml` workflow                   | Posts and updates comments from artifacts produced by unprivileged workflows.                                                                                                    | Done        |
 | 8   | `template-version-comment.yml` workflow     | Compares the pipeline's template version against the current release and reports it on the pull request.                                                                         | Done        |
-| 9   | `branch.yml` + `clean-up.yml` workflows     | Branch protection check for release pull requests; stale issue and pull request handling.                                                                                        | Not started |
+| 9   | `branch.yml` + `clean-up.yml` workflows     | Branch protection check for release pull requests; stale issue and pull request handling.                                                                                        | Done        |
 | 10  | `download_pipeline.yml` workflow            | Tests `nf-core pipelines download` against the pipeline, including the stub run.                                                                                                 | Not started |
 | 11  | `awstest.yml` + `awsfulltest.yml` workflows | Launches small and full tests on Seqera Platform. Adds the reviewer permission check the security review requires.                                                               | Not started |
 | 12  | `release-announcements.yml` workflow        | Posts release announcements to the configured channels.                                                                                                                          | Not started |
@@ -98,14 +98,24 @@ workflows above are proven. Revisit after stage 12.
   pipeline has, and no pipeline has needed a different one since. Add
   `ci.nextflow_lint_exclude` (a string-list, the same shape as `profiles`) if
   one genuinely does.
-- `pr-comment.yml` (stage 7)'s example stub now lists three producer workflows,
-  `nf-core linting`, `nf-test` and `nf-core template version comment` (stage 8).
-  The vendored workflow it replaces watched four; the remaining one,
-  `branch.yml` (stage 9), adds its own name to the example's `workflows:` list
-  once built.
-- `template-version` (stage 8) writes its own half of the `pr-comment` artifact
-  in `src/actions/template-version/artifact.ts`, byte-for-byte the same shape
-  `post-comment`'s `artifact.ts` reads. `branch.yml` (stage 9) is the second
-  producer that will need this; move it to `src/lib/` then, not before, per this
-  file's own convention of moving shared code at the point a second user needs
-  it.
+- Resolved by stage 9: `pr-comment.yml` (stage 7)'s example stub now lists all
+  four producer workflows the vendored workflow it replaces watched, including
+  `nf-core branch protection` (`branch.yml`, stage 9).
+- Resolved by stage 9: the shared `pr-comment` artifact writer moved to
+  `src/lib/pr-comment-artifact.ts`, once `branch.yml`'s own `branch` action
+  became the second user, per this file's own convention of moving shared code
+  at the point a second user needs it. `template-version/artifact.ts` now
+  delegates to it.
+- Stage 9's `branch.yml` fixed a gap in the vendored check it replaces: a pull
+  request from an unrelated fork with a branch literally named `patch` used to
+  pass the branch-protection check (`[[ "$GITHUB_HEAD_REF" == "patch" ]]` alone,
+  with no repository check). The new `isAllowedSource()` requires the head
+  repository to match the pipeline's own canonical repository for `patch`, the
+  same as it already did for `dev`. See README.md's `branch` action section.
+- Stage 9's `clean-up.yml` keeps `actions/stale` (GitHub's own `actions`
+  organisation, the same publisher as `actions/checkout` and
+  `actions/upload-artifact`) inside its privileged job, rather than
+  reimplementing stale-issue handling by hand. This honours, rather than needs
+  an exception from, the "no third-party action in a privileged job" rule: see
+  README.md's `clean-up.yml` section for why that publisher is the same trust
+  tier this repo already relies on elsewhere.

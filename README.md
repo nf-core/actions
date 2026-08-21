@@ -951,6 +951,7 @@ on:
       - nf-core linting
       - nf-test
       - nf-core template version comment
+      - nf-core branch protection
     types: [completed]
 
 permissions: {}
@@ -973,10 +974,10 @@ line. `types: [completed]` is required: `workflow_run` defaults to firing on
 `requested`, `in_progress`, **and** `completed`, and only a `completed` run has
 an artifact to download.
 
-The vendored workflow this replaces watched four producers. This stub lists
-three; the fourth, `branch.yml` (stage 9), does not exist here yet and adds its
-own name to this list once built. Add each one, in the pull request that adds
-the producer itself, as described above.
+The vendored workflow this replaces watched four producers. This stub now lists
+all four: [`branch.yml`](#the-branchyml-workflow) is the last one, added by this
+same stage. Add a future producer's name to this list too, in the pull request
+that adds the producer itself, as described above.
 
 The calling job grants `actions: read` and `pull-requests: write`, the same two
 permissions [`pr-comment.yml`](.github/workflows/pr-comment.yml)'s own job
@@ -1217,6 +1218,274 @@ action. Nothing new was added to `.nf-core.yml` for this workflow.
   split. A pipeline stub still pointing at an older, combined,
   `pull_request_target` version of this check should migrate to the stub above
   and drop any `secrets:` it passes: this workflow needs none.
+
+## The `branch` action
+
+The [`branch`](actions/branch) action decides whether a pull request's source
+branch is one this pipeline's release branch (`main`/`master`) accepts, and
+writes a `pr-comment` artifact: a comment only when it is not. It fails itself
+when the source is not allowed — that failure, not the artifact, is what branch
+protection reads — and never posts a comment.
+
+```yaml
+- name: Check the pull request's source branch
+  uses: nf-core/actions/actions/branch@v1
+  with:
+    event-name: ${{ github.event_name }}
+    head-repo: ${{ github.event.pull_request.head.repo.full_name }}
+    head-ref: ${{ github.event.pull_request.head.ref }}
+    base-ref: ${{ github.event.pull_request.base.ref }}
+    repository: ${{ github.repository }}
+    pr-user: ${{ github.event.pull_request.user.login }}
+    pr-number: ${{ github.event.pull_request.number }}
+```
+
+| Input           | Required | Purpose                                                                                                                     |
+| --------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `event-name`    | Yes      | Event that triggered the run. Must be `pull_request`; see below.                                                            |
+| `head-repo`     | Yes      | Pull request head repository, full name (`owner/repo`).                                                                     |
+| `head-ref`      | Yes      | Pull request head branch.                                                                                                   |
+| `base-ref`      | Yes      | Pull request base branch. Checked against the release branches, and recorded in the comment when the source is not allowed. |
+| `repository`    | Yes      | This pipeline's own canonical repository, full name (`owner/repo`).                                                         |
+| `pr-user`       | Yes      | Pull request author's login. Recorded in the comment when the source is not allowed.                                        |
+| `pr-number`     | Yes      | Pull request number to record in `pr_number.txt`.                                                                           |
+| `artifact-path` | No       | Directory to write the `pr-comment` artifact files into. Defaults to `pr-comment`.                                          |
+
+### Allowed sources are an nf-core convention, not a pipeline setting
+
+Every nf-core pipeline's release branch accepts exactly two sources: its own
+`dev` branch, or its own `patch` branch, pushed for a hotfix based on the last
+release. Both names, and the rule itself, are the same across every nf-core
+pipeline; nothing here is pipeline-specific, so `decide.ts` hardcodes them
+instead of reading a `.nf-core.yml` setting. A pipeline that genuinely needs a
+different rule does not call this workflow.
+
+`isAllowedSource()` also requires `head-repo` to equal `repository` for a
+`patch` branch, not only for `dev`. The vendored shell check this replaces did
+not: `[[ "$GITHUB_HEAD_REF" == "patch" ]]` on its own let a pull request from
+any fork with a branch literally named `patch` past the check, regardless of
+which repository it came from. nf-core's own patch branches live in the
+pipeline's canonical repository (confirmed against rnaseq's own git history: its
+`patch` branch merges have always come from `nf-core/rnaseq:patch`, never a
+fork), so this closes that gap rather than reproducing it.
+
+### `base-ref` must be a release branch, or the check does not apply
+
+`isReleaseBranch()` checks `base-ref` against `main`/`master` before
+`isAllowedSource()` runs at all. When it is not one of them, the source-branch
+rule has nothing to say — a pull request against `dev` is never subject to it —
+so the action passes and logs why, without evaluating the source at all. This
+guards a pipeline stub that omits its own `branches: [main, master]` filter (see
+the `branch.yml` example below): without this check, every fork pull request
+into `dev` would fail, telling the contributor to retarget to `dev`, which is
+where they already are.
+
+### The action fails on an unexpected event, instead of the job skipping
+
+`branch.yml`'s job carries no `if: github.event_name == 'pull_request'` guard
+(see below): this is a required status check, and GitHub counts a skipped
+required check as passed, so a guard that skips would silently remove branch
+protection instead of enforcing it. Passing `event-name` in and checking it here
+means an unexpected event fails loudly, naming the event received and what the
+stub must trigger on, instead of disappearing.
+
+### The `pr-comment` artifact
+
+| File            | Contents                                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr_number.txt` | The pull request number, as plain text.                                                                                                 |
+| `header.txt`    | `branch`. Distinct from `linting.yml`'s `lint` and `template-version`'s `template-version`, so none of the three comments ever collide. |
+| `comment.md`    | Present only when the source branch is not allowed.                                                                                     |
+
+No `resolved.md`: a pull request's head repository, head branch, and this
+pipeline's own canonical repository are fixed for its whole life, so a blocked
+decision can never later flip to allowed on the same pull request. The only way
+for a pull request to become acceptable is to retarget its base branch — which
+this check does not consider, and which also takes the pull request outside
+`branch.yml`'s own `branches: [main, master]` filter, so this workflow stops
+running for it entirely. **If a contributor follows the comment's instruction
+and retargets to `dev`, this workflow no longer runs for that pull request, so
+the blocked comment is left standing.** A maintainer can hide it manually. This
+is a known, accepted consequence, not a gap to work around with an extra
+trigger.
+
+### The comment does not @mention the contributor the way the vendored one did
+
+The vendored workflow's failure comment opened with `Hi @${PR_USER},`, a real
+GitHub mention that notified the pull request's author. `post-comment` (see
+[above](#the-post-comment-action)) turns every `@mention` in a producer's
+`comment.md` into inline code, for every producer, so nobody it posts for can
+ping an arbitrary account through a report it did not write itself. This
+comment's `@${prUser}` is no exception: it still names the author, but renders
+as text, not a notification. This is a real behaviour change from the vendored
+workflow, and a deliberate consequence of `post-comment`'s own design (stage 7),
+not something this action works around.
+
+## The `branch.yml` workflow
+
+[`branch.yml`](.github/workflows/branch.yml) replaces a vendored workflow that
+checked a pull request's source branch with a shell one-liner, and built its own
+three-file `pr-comment` artifact by hand for a separate poster to publish.
+
+```yaml
+# .github/workflows/branch.yml in a pipeline repo
+name: nf-core branch protection
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions: {}
+
+jobs:
+  run:
+    permissions: {}
+    uses: nf-core/actions/.github/workflows/branch.yml@v1
+```
+
+`run:` grants nothing: the one job inside `branch.yml` never checks out anything
+and holds `permissions: {}` itself, so there is nothing for the stub to grant
+back. No job needs a secret either, so the stub passes none.
+
+**Add this workflow's stub `name:` to the pipeline's `pr-comment.yml`
+`workflows:` list.** Without that, this workflow still runs and still produces
+the artifact, but nothing ever posts it: see
+[The `pr-comment.yml` workflow](#the-pr-commentyml-workflow), whose own example
+stub above already includes `nf-core branch protection`.
+
+### `.nf-core.yml` keys
+
+None. See
+[Allowed sources are an nf-core convention, not a pipeline setting](#allowed-sources-are-an-nf-core-convention-not-a-pipeline-setting)
+above for why.
+
+### Migrating from the vendored workflow
+
+- **Check name**: keep the stub's `name:` as `nf-core branch protection`. The
+  job inside it is now called `branch`, not `test`, so the full check name
+  changes from `nf-core branch protection / test` to
+  `nf-core branch protection / branch`. Update branch protection to the new
+  name.
+- **The `github.repository == '<pipeline name>'` outer gate is gone.** The
+  vendored workflow needed it so a fork that copied the file verbatim, without
+  re-templating the pipeline's own name into it, would skip the check instead of
+  enforcing it incorrectly against itself. This workflow computes its own
+  canonical repository from `github.repository` at run time instead of from a
+  baked-in name, so that drift is no longer possible, and the gate has nothing
+  left to guard against.
+- **The failure comment no longer @mentions the contributor.** See
+  [above](#the-comment-does-not-mention-the-contributor-the-way-the-vendored-one-did).
+- **A branch named `patch` in an unrelated fork no longer passes.** See
+  [above](#allowed-sources-are-an-nf-core-convention-not-a-pipeline-setting).
+- **Posting the comment moves to `pr-comment.yml`.** The vendored workflow
+  already only built an artifact for a separate poster to read (it never held a
+  comment-posting token itself); add this workflow's stub name to that poster's
+  `workflows:` list, as shown above.
+- **The stub must trigger `on: pull_request`.** This is a required status check,
+  and GitHub counts a skipped required check as passed, so the job runs
+  unconditionally and the action fails loudly, naming the event, when the
+  trigger is anything else. See
+  [above](#the-action-fails-on-an-unexpected-event-instead-of-the-job-skipping).
+  Keep the stub's own `branches: [main, master]` filter too: it is what keeps
+  this workflow from running at all once a pull request is retargeted away from
+  a release branch (see
+  [above](#base-ref-must-be-a-release-branch-or-the-check-does-not-apply)).
+
+## The `clean-up.yml` workflow
+
+[`clean-up.yml`](.github/workflows/clean-up.yml) replaces a vendored workflow
+that ran `actions/stale` directly on a weekly schedule: it labels, and for an
+issue also closes, anything an nf-core contributor tagged `awaiting-changes` or
+`awaiting-feedback` that nobody followed up on.
+
+```yaml
+# .github/workflows/clean-up.yml in a pipeline repo
+name: nf-core clean-up
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Once a week
+
+permissions: {}
+
+jobs:
+  run:
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: nf-core/actions/.github/workflows/clean-up.yml@v1
+```
+
+The `schedule` trigger stays in the pipeline's own stub: `workflow_call`, the
+only trigger `clean-up.yml` itself declares, has no schedule of its own to
+inherit. `run:` grants `issues: write` and `pull-requests: write`, the same two
+permissions the one job inside `clean-up.yml` requests, to label, comment on,
+and close stale items.
+
+### Guarding a forked schedule
+
+A scheduled trigger runs from whichever repository holds the copy of the
+workflow file that declares it — here, the pipeline's own stub — so a fork that
+keeps this stub inherits the schedule too, and would otherwise label and close
+the fork's own issues and pull requests on the same cadence as the pipeline it
+was forked from. The intent is exactly that: skip a fork. A first step checks
+`github.event.repository.fork` directly and, when true, logs why and lets the
+job end there; the `actions/stale` step itself runs only
+`if: '!github.event.repository.fork'`.
+
+An earlier version of this guard checked `github.repository_owner == 'nf-core'`
+instead, on the reasoning that every nf-core pipeline shares that one owner.
+That check has two problems `repository.fork` does not: it does not exempt a
+fork that happens to live under the `nf-core` organisation itself, and it skips
+outright — with nothing in the log explaining why — for any other organisation
+that uses the nf-core pipeline template, rather than the fork it was actually
+meant to guard against.
+
+### No third-party action in a privileged job — and no exception needed
+
+This repo's own rule (see CONTRIBUTING.md) is that a privileged job — one
+holding a secret or a push credential, here `issues: write` and
+`pull-requests: write` — runs no third-party action. `clean-up.yml`'s one job is
+privileged by that definition, and its one step runs `actions/stale`. This still
+honours the rule rather than needing an exception from it: `actions/stale` is
+published by GitHub's own `actions` organisation, the same publisher as
+`actions/checkout` and `actions/upload-artifact`, both of which this repo
+already runs inside a privileged job elsewhere (`fix-linting.yml`'s `push-fix`
+job, which holds `issues: write` and a push credential). The rule exists to keep
+an unreviewed third party's code out of a job that holds something worth
+stealing; `actions/stale`, pinned to a commit SHA the same way every other
+external action here is, sits in the same trust tier this repo already relies
+on, not a lower one.
+
+### `.nf-core.yml` keys
+
+None. The day counts, labels and messages below are the vendored workflow's own
+exact values, unchanged: no pipeline has ever set them to anything else, and
+this is a plain pass-through to `actions/stale` with no decision of its own to
+put in TypeScript. Add a `ci:` setting for one, the same way `nextflow_lint` or
+`profiles` were added, only once a pipeline genuinely needs a different value.
+
+| Setting                | Value                                                             |
+| ---------------------- | ----------------------------------------------------------------- |
+| `days-before-stale`    | `30`                                                              |
+| `days-before-close`    | `20`                                                              |
+| `days-before-pr-close` | `-1` (a pull request is labelled, never closed, by this workflow) |
+| `any-of-labels`        | `awaiting-changes,awaiting-feedback`                              |
+| `exempt-issue-labels`  | `WIP`                                                             |
+| `exempt-pr-labels`     | `WIP`                                                             |
+
+### Migrating from the vendored workflow
+
+- **Check name**: `clean-up.yml` is not a required status check (it never runs
+  on a pull request), so branch protection is unaffected.
+- **The stale-action pin moves from v10 to v11.** rnaseq's own copy of the
+  vendored workflow was still pinned to
+  `actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f # v10`; the current
+  pipeline template had already moved to `v11`. This workflow uses the current
+  template's pin.
+- **The scheduled run now skips a fork.** See
+  [Guarding a forked schedule](#guarding-a-forked-schedule) above; the vendored
+  workflow had no such guard.
 
 ## Tag policy
 

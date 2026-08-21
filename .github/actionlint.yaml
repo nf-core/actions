@@ -16,6 +16,11 @@ paths:
       - 'specifying action
         "\$/actions/(read-config|get-shards|nf-test|plan-run)" in invalid format
         because ref is missing'
+  .github/workflows/branch.yml:
+    ignore:
+      # Same '$/' gap as above, for this workflow's own sibling action.
+      - 'specifying action "\$/actions/branch" in invalid format because ref is
+        missing'
   .github/workflows/fix-linting.yml:
     ignore:
       # Same '$/' gap as above, for this workflow's own sibling actions.
