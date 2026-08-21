@@ -1,305 +1,132 @@
-# Create a GitHub Action Using TypeScript
+# nf-core/actions
 
-![Linter](https://github.com/actions/typescript-action/actions/workflows/linter.yml/badge.svg)
-![CI](https://github.com/actions/typescript-action/actions/workflows/ci.yml/badge.svg)
-![Check dist/](https://github.com/actions/typescript-action/actions/workflows/check-dist.yml/badge.svg)
-![CodeQL](https://github.com/actions/typescript-action/actions/workflows/codeql-analysis.yml/badge.svg)
-![Coverage](./badges/coverage.svg)
+Centralised reusable workflows and TypeScript actions for nf-core pipelines.
 
-Use this template to bootstrap the creation of a TypeScript action. :rocket:
+A pipeline repo keeps a thin stub workflow that calls a reusable workflow here,
+pinned to a major tag such as `@v1`. All logic, and all security fixes, live in
+this repo. When a maintainer moves the `v1` tag, every pipeline that calls it
+picks up the change on its next run. Changing a value in 141 pipeline repos
+needs a 141-repo campaign; changing it here needs one tag move.
 
-This template includes compilation support, tests, a validation workflow,
-publishing, and versioning guidance.
+## Example: a pipeline using this repo
 
-If you are new, there's also a simpler introduction in the
-[Hello world JavaScript action repository](https://github.com/actions/hello-world-javascript-action).
-
-## Create Your Own Action
-
-To create your own action, you can use this repository as a template! Just
-follow the below instructions:
-
-1. Click the **Use this template** button at the top of the repository
-1. Select **Create a new repository**
-1. Select an owner and name for your new repository
-1. Click **Create repository**
-1. Clone your new repository
-
-> [!IMPORTANT]
->
-> Make sure to remove or update the [`CODEOWNERS`](./CODEOWNERS) file! For
-> details on how to use this file, see
-> [About code owners](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners).
-
-## Initial Setup
-
-After you've cloned the repository to your local machine or codespace, you'll
-need to perform some initial setup steps before you can develop your action.
-
-> [!NOTE]
->
-> You'll need to have a reasonably modern version of
-> [Node.js](https://nodejs.org) handy (20.x or later should work!). If you are
-> using a version manager like [`nodenv`](https://github.com/nodenv/nodenv) or
-> [`fnm`](https://github.com/Schniz/fnm), this template has a `.node-version`
-> file at the root of the repository that can be used to automatically switch to
-> the correct version when you `cd` into the repository. Additionally, this
-> `.node-version` file is used by GitHub Actions in any `actions/setup-node`
-> actions.
-
-1. :hammer_and_wrench: Install the dependencies
-
-   ```bash
-   npm install
-   ```
-
-1. :building_construction: Package the TypeScript for distribution
-
-   ```bash
-   npm run bundle
-   ```
-
-1. :white_check_mark: Run the tests
-
-   ```bash
-   $ npm test
-
-   PASS  ./index.test.js
-     ✓ throws invalid number (3ms)
-     ✓ wait 500 ms (504ms)
-     ✓ test runs (95ms)
-
-   ...
-   ```
-
-## Update the Action Metadata
-
-The [`action.yml`](action.yml) file defines metadata about your action, such as
-input(s) and output(s). For details about this file, see
-[Metadata syntax for GitHub Actions](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions).
-
-When you copy this repository, update `action.yml` with the name, description,
-inputs, and outputs for your action.
-
-## Update the Action Code
-
-The [`src/`](./src/) directory is the heart of your action! This contains the
-source code that will be run when your action is invoked. You can replace the
-contents of this directory with your own code.
-
-There are a few things to keep in mind when writing your action code:
-
-- Most GitHub Actions toolkit and CI/CD operations are processed asynchronously.
-  In `main.ts`, you will see that the action is run in an `async` function.
-
-  ```javascript
-  import * as core from '@actions/core'
-  //...
-
-  async function run() {
-    try {
-      //...
-    } catch (error) {
-      core.setFailed(error.message)
-    }
-  }
-  ```
-
-  For more information about the GitHub Actions toolkit, see the
-  [documentation](https://github.com/actions/toolkit/blob/main/README.md).
-
-So, what are you waiting for? Go ahead and start customizing your action!
-
-1. Create a new branch
-
-   ```bash
-   git checkout -b releases/v1
-   ```
-
-1. Replace the contents of `src/` with your action code
-1. Add tests to `__tests__/` for your source code
-1. Format, test, and build the action
-
-   ```bash
-   npm run all
-   ```
-
-   > This step is important! It will run [`rollup`](https://rollupjs.org/) to
-   > build the final JavaScript action code with all dependencies included. If
-   > you do not run this step, your action will not work correctly when it is
-   > used in a workflow.
-
-1. (Optional) Test your action locally
-
-   The [`@github/local-action`](https://github.com/github/local-action) utility
-   can be used to test your action locally. It is a simple command-line tool
-   that "stubs" (or simulates) the GitHub Actions Toolkit. This way, you can run
-   your TypeScript action locally without having to commit and push your changes
-   to a repository.
-
-   The `local-action` utility can be run in the following ways:
-   - Visual Studio Code Debugger
-
-     Make sure to review and, if needed, update
-     [`.vscode/launch.json`](./.vscode/launch.json)
-
-   - Terminal/Command Prompt
-
-     ```bash
-     # npx @github/local action <action-yaml-path> <entrypoint> <dotenv-file>
-     npx @github/local-action . src/main.ts .env
-     ```
-
-   You can provide a `.env` file to the `local-action` CLI to set environment
-   variables used by the GitHub Actions Toolkit. For example, setting inputs and
-   event payload data used by your action. For more information, see the example
-   file, [`.env.example`](./.env.example), and the
-   [GitHub Actions Documentation](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).
-
-1. Commit your changes
-
-   ```bash
-   git add .
-   git commit -m "My first action is ready!"
-   ```
-
-1. Push them to your repository
-
-   ```bash
-   git push -u origin releases/v1
-   ```
-
-1. Create a pull request and get feedback on your action
-1. Merge the pull request into the `main` branch
-
-Your action is now published! :rocket:
-
-For information about versioning your action, see
-[Versioning](https://github.com/actions/toolkit/blob/main/docs/action-versioning.md)
-in the GitHub Actions toolkit.
-
-## Validate the Action
-
-You can now validate the action by referencing it in a workflow file. For
-example, [`ci.yml`](./.github/workflows/ci.yml) demonstrates how to reference an
-action in the same repository.
+A pipeline repo does not implement test logic itself. It calls the shared
+workflow and passes its own settings:
 
 ```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
+# .github/workflows/nf-test.yml in a pipeline repo
+name: nf-test
 
-  - name: Test Local Action
-    id: test-action
-    uses: ./
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    uses: nf-core/actions/.github/workflows/nf-test.yml@v1
     with:
-      milliseconds: 1000
-
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
+      profile: docker
+    secrets: inherit
 ```
 
-For example workflow runs, check out the
-[Actions tab](https://github.com/actions/typescript-action/actions)! :rocket:
+The pipeline repo never edits test logic, matrix setup, or reporting. It only
+supplies the small set of inputs the shared workflow accepts.
 
-## Usage
+## Configuration precedence
 
-After testing, you can create version tag(s) that developers can use to
-reference different stable versions of your action. For more information, see
-[Versioning](https://github.com/actions/toolkit/blob/main/docs/action-versioning.md)
-in the GitHub Actions toolkit.
+Every setting a shared workflow or action reads resolves in this order:
 
-To include the action in a workflow in another repository, you can use the
-`uses` syntax with the `@` symbol to reference a specific branch, tag, or commit
-hash.
+1. The workflow `with:` input, if the calling pipeline set one.
+2. The `.nf-core.yml` file in the calling pipeline's repo, if it sets one.
+3. A built-in default in this repo.
+
+Falling back to the built-in default logs a warning in the Actions run, so a
+pipeline maintainer can see when they are relying on a default instead of an
+explicit choice.
+
+`.nf-core.yml` also records the pipeline's template version. Code in this repo
+reads that version and can change behaviour for older pipelines instead of
+breaking them outright.
+
+## The `ci:` config block
+
+The [`read-config`](actions/read-config) action resolves CI settings and exposes
+them as outputs for later steps and reusable workflows. It reads a `ci:` block
+from the pipeline's `.nf-core.yml`. That block does not exist by default; a
+pipeline adds it only to override a setting. For example:
 
 ```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
-
-  - name: Test Local Action
-    id: test-action
-    uses: actions/typescript-action@v1 # Commit with the `v1` tag
-    with:
-      milliseconds: 1000
-
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
+# .nf-core.yml in a pipeline repo
+nf_core_version: '4.0.3'
+repository_type: pipeline
+template:
+  name: rnaseq
+  org: nf-core
+  version: '3.27.0dev'
+ci:
+  nf_test_version: '0.10.0'
+  nextflow_versions: ['24.10.0', 'latest-everything']
+  profiles: ['docker', 'singularity']
+  max_shards: 12
+  nf_test_workdir: '~'
+  runner: '8cpu-linux-x64'
 ```
 
-## Publishing a New Release
+Omitting a key under `ci:` is normal. It means the pipeline follows the central
+default for that setting, and `read-config` logs a warning in the Actions run
+naming the setting and the default used, so a maintainer can see where the value
+came from.
 
-This project includes a helper script, [`script/release`](./script/release)
-designed to streamline the process of tagging and pushing new releases for
-GitHub Actions.
+Each setting follows the same three-step order as
+[Configuration precedence](#configuration-precedence) above: the action input
+first, then the value at that setting's path under `ci:`, then the built-in
+default.
 
-GitHub Actions allows users to select a specific version of the action to use,
-based on release tags. This script simplifies this process by performing the
-following steps:
+A setting whose value is a list or a number is available on the input side and
+the output side as JSON, for example `'["docker","singularity"]'` or `'12'`, so
+a calling workflow can use `fromJSON()` to build a matrix.
 
-1. **Retrieving the latest release tag:** The script starts by fetching the most
-   recent SemVer release tag of the current branch, by looking at the local data
-   available in your repository.
-1. **Prompting for a new release tag:** The user is then prompted to enter a new
-   release tag. To assist with this, the script displays the tag retrieved in
-   the previous step, and validates the format of the inputted tag (vX.X.X). The
-   user is also reminded to update the version field in package.json.
-1. **Tagging the new release:** The script then tags a new release and syncs the
-   separate major tag (e.g. v1, v2) with the new release tag (e.g. v1.0.0,
-   v2.1.2). When the user is creating a new major release, the script
-   auto-detects this and creates a `releases/v#` branch for the previous major
-   version.
-1. **Pushing changes to remote:** Finally, the script pushes the necessary
-   commits, tags and branches to the remote repository. From here, you will need
-   to create a new release in GitHub so users can easily reference the new tags
-   in their workflows.
+`read-config` also exposes `nf-core-version`, `repository-type`, and
+`pipeline-name`, read from the pipeline's existing schema outside `ci:`. These
+have no built-in default: if a pipeline's `.nf-core.yml` does not set them, the
+output is an empty string and `read-config` logs a warning.
 
-## Dependency License Management
+## Tag policy
 
-This template includes a GitHub Actions workflow,
-[`licensed.yml`](./.github/workflows/licensed.yml), that uses
-[Licensed](https://github.com/licensee/licensed) to check for dependencies with
-missing or non-compliant licenses. This workflow is initially disabled. To
-enable the workflow, follow the below steps.
+Two different pinning rules apply, for two different trust relationships:
 
-1. Open [`licensed.yml`](./.github/workflows/licensed.yml)
-1. Uncomment the following lines:
+- **Pipelines pin this repo by tag.** A pipeline's stub workflow calls
+  `nf-core/actions/...@v1`. This repo, and the `nf-core` GitHub org, are
+  controlled by nf-core maintainers, so a moving major tag is the intended
+  distribution mechanism.
+- **This repo pins external actions by commit SHA.** Any third-party action used
+  inside this repo's own workflows (`actions/checkout`, `github/codeql-action`,
+  and so on) is pinned to a full commit SHA, with a `# vX` comment for context.
+  Actions under the `nf-core`, `nextflow-io`, and `seqeralabs` orgs are the
+  exception: those orgs are nf-core-controlled, so they are pinned to a major
+  tag, the same as pipelines pin this repo. The trust chain ends at code nf-core
+  has reviewed.
 
-   ```yaml
-   # pull_request:
-   #   branches:
-   #     - main
-   # push:
-   #   branches:
-   #     - main
-   ```
+A tag ruleset on this repo blocks anyone from moving a major tag (`v1`, `v2`,
+...) outside the [release workflow](.github/workflows/release.yml), which gates
+the move behind required reviewers.
 
-1. Save and commit the changes
+## Layout
 
-Once complete, this workflow will run any time a pull request is created or
-changes pushed directly to `main`. If the workflow detects any dependencies with
-missing or non-compliant licenses, it will fail the workflow and provide details
-on the issue(s) found.
-
-### Updating Licenses
-
-Whenever you install or update dependencies, you can use the Licensed CLI to
-update the licenses database. To install Licensed, see the project's
-[Readme](https://github.com/licensee/licensed?tab=readme-ov-file#installation).
-
-To update the cached licenses, run the following command:
-
-```bash
-licensed cache
+```
+actions/<name>/action.yml   Action metadata: runs.using: node24, runs.main: dist/index.js
+actions/<name>/dist/        Committed, built bundle for that action
+src/actions/<name>/         TypeScript source for that action's entry point
+src/lib/                    Shared code used by more than one action
+__tests__/                  Unit tests, mirroring src/
+.github/workflows/          Reusable workflows pipelines call, plus this repo's own CI
 ```
 
-To check the status of cached licenses, run the following command:
+`actions/*/dist/**` is committed. It is built from `src/`, never written by
+hand, and CI fails if it is out of date. The bundle is not minified and has no
+sourcemap, so a pull request diff shows the actual code change under review.
 
-```bash
-licensed status
-```
+See [PLAN.md](./PLAN.md) for the stage-by-stage build plan, and
+[CONTRIBUTING.md](./CONTRIBUTING.md) for how to build, test, and add an action.

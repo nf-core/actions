@@ -1,5 +1,6 @@
-name: JavaScript CodeQL Configuration
+name: nf-core/actions CodeQL configuration
 
 paths-ignore:
   - node_modules
-  - dist
+  - actions/*/dist
+  - coverage

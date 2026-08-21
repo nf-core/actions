@@ -1,0 +1,142 @@
+name: Release
+
+# Moving the major tag (for example v1) ships every change here to every
+# pipeline pinned to it. See README's tag policy section for the full policy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, in vX.Y.Z format'
+        required: true
+
+# Only one release moves the major tag at a time. Without this, two
+# approvals in quick succession can run two tag jobs at once, and whichever
+# finishes last wins the major tag, even if it is the older release.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      major: ${{ steps.validate.outputs.major }}
+      sha: ${{ steps.validate.outputs.sha }}
+
+    steps:
+      # Tags are needed to validate $VERSION against what already exists.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Validate version format and resolve the commit to release
+        id: validate
+        env:
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+        run: |
+          # A release must come from main. Otherwise this moves the major
+          # tag to a commit from a feature branch, for every pipeline.
+          if [[ "$REF" != "refs/heads/main" ]]; then
+            echo "::error::Releases must run from main, not '$REF'."
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$VERSION' is not in vX.Y.Z format."
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "::error::Tag '$VERSION' already exists."
+            exit 1
+          fi
+
+          major="${VERSION%%.*}"
+
+          # A release always tags main, so it can only ever be the newest
+          # major. Releasing v1.5.0 while v2 exists would move the v1 tag to
+          # v2 code, and every pipeline pinned to v1 would run it. This repo
+          # does not support backports; use a release branch workflow for
+          # that, so the older major keeps pointing at older code.
+          highest_major="$(git tag -l 'v[0-9]*' | sed 's/\..*//' | sort -V | tail -n1)"
+          if [[ -n "$highest_major" ]] && [[ "$(printf '%s\n%s\n' "$highest_major" "$major" | sort -V | tail -n1)" != "$major" ]]; then
+            echo "::error::'$VERSION' is on $major, but $highest_major already exists. Releasing an older major from main would move $major onto newer code."
+            exit 1
+          fi
+
+          # Tags on the same major line, for example v1.* for v1.4.0.
+          existing="$(git tag -l "${major}.*")"
+          if [[ -n "$existing" ]]; then
+            highest="$(printf '%s\n%s\n' "$existing" "$VERSION" | sort -V | tail -n1)"
+            if [[ "$highest" != "$VERSION" ]]; then
+              latest_existing="$(printf '%s\n' "$existing" | sort -V | tail -n1)"
+              echo "::error::'$VERSION' is not newer than '$latest_existing', the latest existing tag on $major."
+              exit 1
+            fi
+          fi
+          # No existing tag on this major line: the first release of a new
+          # major, or the first release overall. Both are allowed.
+
+          {
+            echo "version=$VERSION"
+            echo "major=$major"
+            echo "sha=$SHA"
+          } >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Verify release
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+
+  tag:
+    name: Tag release
+    needs:
+      - prepare
+      - verify
+    runs-on: ubuntu-latest
+    # Required reviewers on this environment gate every tag move.
+    environment: release
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout the verified commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - name: Create release tag and move the major tag
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          MAJOR: ${{ needs.prepare.outputs.major }}
+        run: |
+          git config user.name "nf-core-bot"
+          git config user.email "core@nf-co.re"
+
+          # The version tag is exact and must not already exist.
+          git tag -a "$VERSION" -m "$VERSION"
+
+          # The major tag moves to this commit. This is the propagation point:
+          # every pipeline pinned to "$MAJOR" picks this release up next run.
+          git tag -f -a "$MAJOR" -m "Move $MAJOR to $VERSION"
+
+          # Push both tags in one atomic operation, so a rejected major-tag
+          # push cannot leave the version tag published on its own.
+          git push --atomic origin "$VERSION" "+$MAJOR"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: gh release create "$VERSION" --title "$VERSION" --generate-notes

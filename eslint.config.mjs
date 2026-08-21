@@ -1,82 +1,42 @@
 // See: https://eslint.org/docs/latest/use/configure/configuration-files
 
-import { FlatCompat } from '@eslint/eslintrc'
 import js from '@eslint/js'
-import typescriptEslint from '@typescript-eslint/eslint-plugin'
-import tsParser from '@typescript-eslint/parser'
+import eslintConfigPrettier from 'eslint-config-prettier'
 import jest from 'eslint-plugin-jest'
-import prettier from 'eslint-plugin-prettier'
 import globals from 'globals'
+import tseslint from 'typescript-eslint'
 
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all
-})
-
-export default [
+export default tseslint.config(
   {
-    ignores: ['**/coverage', '**/dist', '**/linter', '**/node_modules']
+    ignores: ['actions/*/dist/**', 'coverage/**']
   },
-  ...compat.extends(
-    'eslint:recommended',
-    'plugin:@typescript-eslint/eslint-recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:jest/recommended',
-    'plugin:prettier/recommended'
-  ),
   {
-    plugins: {
-      jest,
-      prettier,
-      '@typescript-eslint': typescriptEslint
-    },
-
+    // Base rules for every JS/TS file, including root config files
+    // (rollup.config.ts, jest.config.js, this file).
+    files: ['**/*.{js,mjs,ts}'],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.jest,
-        Atomics: 'readonly',
-        SharedArrayBuffer: 'readonly'
-      },
-
-      parser: tsParser,
-      ecmaVersion: 2023,
-      sourceType: 'module',
-
+      globals: globals.node
+    }
+  },
+  {
+    // Type-aware rules for the real source. Kept off root config files and
+    // tests so they don't need a tsconfig project of their own.
+    files: ['src/**/*.ts'],
+    extends: [
+      tseslint.configs.strictTypeChecked,
+      tseslint.configs.stylisticTypeChecked
+    ],
+    languageOptions: {
       parserOptions: {
-        projectService: {
-          allowDefaultProject: [
-            '__fixtures__/*.ts',
-            '__tests__/*.ts',
-            'eslint.config.mjs',
-            'jest.config.js',
-            'rollup.config.ts'
-          ]
-        },
+        projectService: true,
         tsconfigRootDir: import.meta.dirname
       }
-    },
-
-    settings: {
-      'import/resolver': {
-        typescript: {
-          alwaysTryTypes: true,
-          project: 'tsconfig.json'
-        }
-      }
-    },
-
-    rules: {
-      camelcase: 'off',
-      'eslint-comments/no-use': 'off',
-      'eslint-comments/no-unused-disable': 'off',
-      'i18n-text/no-en': 'off',
-      'import/no-namespace': 'off',
-      'no-console': 'off',
-      'no-shadow': 'off',
-      'no-unused-vars': 'off',
-      'prettier/prettier': 'error'
     }
-  }
-]
+  },
+  {
+    files: ['__tests__/**/*.ts'],
+    extends: [jest.configs['flat/recommended']]
+  },
+  eslintConfigPrettier
+)

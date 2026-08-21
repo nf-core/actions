@@ -1,0 +1,11 @@
+# See: https://docs.zizmor.sh/configuration/
+
+rules:
+  artipacked:
+    ignore:
+      # The tag job pushes the release tag and the moved major tag with the
+      # checkout token, so persist-credentials must stay on. The job is
+      # gated by the "release" environment and runs no pull request code,
+      # so the token is not exposed to untrusted input. File-level ignore:
+      # a line-scoped one would drift silently if a step moved.
+      - release.yml

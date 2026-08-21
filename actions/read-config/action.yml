@@ -1,0 +1,81 @@
+name: Read CI config
+description: >-
+  Resolves nf-core pipeline CI settings from an action input, then .nf-core.yml,
+  then a built-in default, and exposes them as outputs.
+author: nf-core
+
+inputs:
+  config-file:
+    description: >-
+      Path to the pipeline's config file, relative to the workspace unless
+      absolute.
+    required: false
+    default: .nf-core.yml
+  nf-test-version:
+    description: >-
+      nf-test version to use. Overrides 'ci.nf_test_version' in .nf-core.yml and
+      the built-in default.
+    required: false
+  nextflow-versions:
+    description: >-
+      Nextflow versions to test against, as a JSON array of strings, for example
+      '["24.10.0","latest-everything"]'. Overrides 'ci.nextflow_versions' in
+      .nf-core.yml and the built-in default.
+    required: false
+  profiles:
+    description: >-
+      Container/environment profiles to test, as a JSON array of strings, for
+      example '["docker","singularity"]'. Overrides 'ci.profiles' in
+      .nf-core.yml and the built-in default.
+    required: false
+  max-shards:
+    description: >-
+      Maximum number of nf-test shards, as a JSON number. Overrides
+      'ci.max_shards' in .nf-core.yml and the built-in default.
+    required: false
+  nf-test-workdir:
+    description: >-
+      Working directory for nf-test. Overrides 'ci.nf_test_workdir' in
+      .nf-core.yml and the built-in default.
+    required: false
+  runner:
+    description: >-
+      GitHub Actions runner label to test on. Overrides 'ci.runner' in
+      .nf-core.yml and the built-in default.
+    required: false
+
+outputs:
+  nf-test-version:
+    description: Resolved nf-test version, as a plain string.
+  nextflow-versions:
+    description:
+      Resolved Nextflow versions, as a JSON array of strings. Use fromJSON() to
+      build a matrix.
+  profiles:
+    description:
+      Resolved profiles, as a JSON array of strings. Use fromJSON() to build a
+      matrix.
+  max-shards:
+    description:
+      Resolved maximum shard count, as a JSON number. Use fromJSON() to compare
+      or use in a matrix.
+  nf-test-workdir:
+    description: Resolved nf-test working directory, as a plain string.
+  runner:
+    description: Resolved runner label, as a plain string.
+  nf-core-version:
+    description: >-
+      nf-core template version from 'nf_core_version' in .nf-core.yml, as a
+      plain string. Empty string if not present. Not configurable: read-only.
+  repository-type:
+    description: >-
+      Repository type from 'repository_type' in .nf-core.yml, as a plain string.
+      Empty string if not present. Not configurable: read-only.
+  pipeline-name:
+    description: >-
+      Pipeline name from 'template.name' in .nf-core.yml, as a plain string.
+      Empty string if not present. Not configurable: read-only.
+
+runs:
+  using: node24
+  main: dist/index.js

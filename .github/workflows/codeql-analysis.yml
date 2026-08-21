@@ -12,7 +12,6 @@ on:
 
 permissions:
   actions: read
-  checks: write
   contents: read
   security-events: write
 
@@ -25,25 +24,20 @@ jobs:
       fail-fast: false
       matrix:
         language:
-          - typescript
+          - javascript-typescript
+          - actions
 
     steps:
       - name: Checkout
-        id: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Initialize CodeQL
-        id: initialize
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           config-file: .github/codeql/codeql-config.yml
           languages: ${{ matrix.language }}
-          source-root: src
-
-      - name: Autobuild
-        id: autobuild
-        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        id: analyze
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8

@@ -1,9 +1,13 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /actions/*
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       actions-minor:
         update-types:
@@ -14,6 +18,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       npm-development:
         dependency-type: development
@@ -23,4 +29,5 @@ updates:
       npm-production:
         dependency-type: production
         update-types:
+          - minor
           - patch
