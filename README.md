@@ -2089,6 +2089,291 @@ which is the part a write-access holder could not already do some other way.
   [Do not route a secret through a string input](#do-not-route-a-secret-through-a-string-input)
   above for why.
 
+## The `announce-release` action
+
+The [`announce-release`](actions/announce-release) action composes a release
+announcement from a GitHub release payload and posts it to one channel, either
+Mastodon or Bluesky. `release-announcements.yml` (below) calls it once per
+channel.
+
+```yaml
+- name: Compose and post to Mastodon
+  uses: nf-core/actions/actions/announce-release@v1
+  with:
+    channel: mastodon
+    tag-name: ${{ github.event.release.tag_name }}
+    release-name: ${{ github.event.release.name }}
+    body: ${{ github.event.release.body }}
+    html-url: ${{ github.event.release.html_url }}
+    prerelease: ${{ github.event.release.prerelease }}
+    pipeline-name: ${{ needs.config.outputs.pipeline-name }}
+    repository: ${{ github.repository }}
+    max-length: '500'
+    mastodon-host: mstdn.science
+    mastodon-token: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+```
+
+| Input                | Required | Purpose                                                                                                                                                                                                                            |
+| -------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `channel`            | Yes      | `'mastodon'` or `'bluesky'`.                                                                                                                                                                                                       |
+| `tag-name`           | Yes      | The release's tag. Announced as written; see [A tag is announced, not validated](#a-tag-is-announced-not-validated) below.                                                                                                         |
+| `release-name`       | No       | The release's title. Empty when the release has none, or when it repeats the tag (after the same `v`-prefix normalisation `tag-name` gets, so a title GitHub pre-filled from the tag still dedupes).                               |
+| `body`               | No       | The release's notes (Markdown). Empty when the release has none.                                                                                                                                                                   |
+| `html-url`           | Yes      | The release's URL.                                                                                                                                                                                                                 |
+| `prerelease`         | No       | `'true'` or `'false'`. Empty is treated as `'false'`.                                                                                                                                                                              |
+| `pipeline-name`      | No       | Display name. Falls back to `repository`'s last path segment when empty.                                                                                                                                                           |
+| `repository`         | Yes      | `owner/repo`, for the fallback above.                                                                                                                                                                                              |
+| `max-length`         | Yes      | Maximum length of the posted text, in UTF-16 code units, as a JSON number.                                                                                                                                                         |
+| `mastodon-host`      | No       | Mastodon instance host, for example `mstdn.science`. Required, and used, only for the `mastodon` channel. Must be a bare host name: a value containing a scheme or a slash (for example `https://mstdn.science`) fails validation. |
+| `mastodon-token`     | No       | Mastodon access token. Required, and used, only for the `mastodon` channel.                                                                                                                                                        |
+| `bluesky-identifier` | No       | Bluesky account handle or DID. Required, and used, only for the `bluesky` channel.                                                                                                                                                 |
+| `bluesky-password`   | No       | Bluesky app password. Required, and used, only for the `bluesky` channel.                                                                                                                                                          |
+
+Output `post-url` is the posted status's or post's own public URL.
+
+### Composing the text
+
+The composed message is a head line (pipeline name, tag, and either "has been
+released" or, for a pre-release, "pre-release is available"), an optional
+plain-text excerpt of the release body, the release's own URL, and a fixed set
+of hashtags (`#nfcore #openscience #nextflow #bioinformatics`). A release title
+that repeats the tag (the common case for an auto-generated release, where
+GitHub's own UI pre-fills the title from the tag) is not appended a second time
+— the comparison normalises a leading `v` on both sides first, so a title of
+`v3.14.0` on tag `v3.14.0` dedupes exactly like a title of `3.14.0` does.
+
+The body is degraded from GitHub-flavoured Markdown to plain text — headings,
+bullets, emphasis, inline code, fenced code and links all render literally on a
+channel that interprets none of it, so `**bold**` would otherwise reach the post
+as four literal asterisks around the word. This is a regular-expression pass
+over the shapes nf-core's own release notes actually use, not a full Markdown
+parser: an unsupported construct passes through as plain text rather than
+crashing the action. Italic emphasis is recognised by asterisks only
+(`*italic*`), not underscores: nf-core release notes routinely name snake_case
+parameters (`--skip_pseudo_alignment`) and link to URLs containing underscores,
+and treating `_` as an emphasis delimiter would eat characters out of both.
+
+Every free-text field (`tag-name`, `release-name`, `body`) is stripped of C0
+control characters and DEL before it reaches the composed text, the log, or a
+channel's API: a release is normally written by a trusted maintainer through
+GitHub's own UI, but the payload is still external, author-controlled text, and
+this repo's own conventions treat it that way.
+
+### A tag is announced, not validated
+
+`tag-name` is not required to look like a version. `composeAnnouncement` strips
+a leading `v` before a digit (`v3.14.0` and `3.14.0` display the same way) and
+otherwise announces whatever the release was tagged, exactly as written.
+Rejecting an unexpected tag shape would turn a release with an unconventional
+tag into a silent non-announcement instead of the (slightly odd, but readable)
+text a human would write by hand.
+
+### The length limit is enforced here, not left to the channel
+
+Mastodon's own default limit is 500 characters; Bluesky's protocol limit is 300.
+`max-length` is enforced inside `composeAnnouncement`, not left to the channel's
+own API to reject.
+
+When the full text does not fit, space is sacrificed in this order:
+
+1. The body excerpt is shortened (with an ellipsis marking the cut).
+2. The body excerpt is dropped entirely.
+3. The release title is shortened (with an ellipsis marking the cut).
+4. The release title is dropped entirely.
+
+The release's own URL and the fixed hashtags are never shortened or dropped: a
+post that fits `max-length` but links nowhere is worse than one that keeps less
+body text or a shortened title. (An announcement whose URL and hashtags alone
+are already longer than `max-length` is a configuration error this action cannot
+compose around; in that unreachable-in-practice case, the URL and hashtags are
+what gets cut, because nothing else is left to sacrifice.) Truncation never
+splits a UTF-16 surrogate pair, the same guarantee `post-comment`'s own comment
+body truncation makes (both now share
+[`trimToCodeUnitBoundary`](src/lib/trim-to-code-unit-boundary.ts), moved to
+`src/lib` when this action became its second user).
+
+### A re-run does not duplicate the Mastodon post
+
+The Mastodon request carries an `Idempotency-Key` header derived from
+`repository` and `tag-name`. If the request reaches Mastodon but its response is
+lost (a network blip, the job cancelled mid-request), the step fails and a
+"re-run failed jobs" retry sends the same key: Mastodon recognises it and
+returns the original status instead of creating a duplicate. Bluesky has no
+equivalent header in its `com.atproto.repo.createRecord` call — a deterministic
+record key would need computing the AT Protocol's own `rkey` scheme, which is
+more machinery than this residual, rare duplicate-post risk is worth taking on
+for; a re-run that hits the same failure window can still post to Bluesky twice.
+
+### Where the network call lives, and why no third-party action
+
+Both channels need one authenticated HTTP call: Mastodon is a single
+`POST /api/v1/statuses`; Bluesky is a login call
+(`com.atproto.server.createSession`) followed by one
+`com.atproto.repo.createRecord`. Neither is complex enough to justify a
+third-party action inside a job that holds a real credential — this repo's own
+reviewed code makes both calls directly, with Node's built-in `fetch`, the same
+way `authorize-launch` and `template-version` call the GitHub API directly with
+`@actions/github` rather than through a third-party action.
+
+**Bluesky's own trade-off:** the third-party action this replaces
+(`zentered/bluesky-post-action`) uses `@atproto/api` to compute rich-text facets
+— byte-offset spans that make a link or hashtag inside the post text clickable.
+This action does not compute facets: the post still carries the full text,
+including the URL, as plain text, but a reader has to copy it rather than tap
+it. Computing a facet correctly needs a UTF-8 byte offset, not a UTF-16
+code-unit one everything else in this file uses, which is a real chunk of extra
+logic for a cosmetic upgrade. Add it if clickable links become worth that cost;
+nothing else about this action's design would need to change.
+
+## The `release-announcements.yml` workflow
+
+[`release-announcements.yml`](.github/workflows/release-announcements.yml)
+replaces a vendored, per-pipeline workflow that posted a release announcement to
+Mastodon and Bluesky on every published release. It also supported
+`workflow_dispatch`, but the vendored workflow read the same
+`github.event.release.*` fields regardless of trigger, so a manual run with no
+release in the event payload silently composed an announcement out of empty
+strings. This workflow drops that trigger (see
+[Migrating from the vendored workflow](#migrating-from-the-vendored-workflow-8)
+below) and fails clearly instead if it is ever reached without one (see
+[Requiring a release event](#requiring-a-release-event) below).
+
+```yaml
+# .github/workflows/release-announcements.yml in a pipeline repo
+name: nf-core release announcements
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  announce:
+    permissions:
+      contents: read
+    uses: nf-core/actions/.github/workflows/release-announcements.yml@v1
+    secrets:
+      MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+      BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+```
+
+`announce:` grants `contents: read`, the most any job inside
+`release-announcements.yml` asks for (`config`, to read `.nf-core.yml`; the
+`mastodon` and `bluesky` jobs ask for nothing). All three `secrets:` lines are
+independently optional: a pipeline that only wants to announce to Mastodon omits
+the two Bluesky ones, and vice versa. Omitting all three is valid too — every
+channel is skipped, and every job still passes — but is almost certainly not
+what a maintainer wants; see
+[A missing secret skips, it does not fail — or silently do nothing](#a-missing-secret-skips-it-does-not-fail--or-silently-do-nothing)
+below for why that is the intended behaviour anyway.
+
+### Inputs
+
+| Input                 | Required | Default         | Purpose                                                                                                                                         |
+| --------------------- | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mastodon-host`       | No       | `mstdn.science` | Mastodon instance host to post to. A bare host name; see the `announce-release` action's own note on why a URL is rejected.                     |
+| `mastodon-max-length` | No       | `'500'`         | Maximum length of the Mastodon post. Mastodon's own default is 500; lower this to match a self-hosted instance configured with a smaller limit. |
+
+### Secrets
+
+| Secret                  | Required | Purpose                                                                                                        |
+| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `MASTODON_ACCESS_TOKEN` | No       | Mastodon access token, scoped to `write:statuses`. Omit to skip the Mastodon announcement.                     |
+| `BLUESKY_IDENTIFIER`    | No       | Bluesky account handle or DID. Paired with `BLUESKY_APP_PASSWORD`; omit both to skip the Bluesky announcement. |
+| `BLUESKY_APP_PASSWORD`  | No       | Bluesky app password, from Bluesky's own Settings > App Passwords, not the account's login password.           |
+
+### `.nf-core.yml` keys
+
+One: `template.name`, resolved by `read-config` as `pipeline-name` and used as
+the announcement's display name. There is no `.nf-core.yml` key for which
+channels are enabled; see
+[Where channel enablement lives, and why](#where-channel-enablement-lives-and-why)
+below.
+
+### A missing secret skips, it does not fail — or silently do nothing
+
+Each channel job (`mastodon`, `bluesky`) runs unconditionally and starts with a
+step that checks its own secret (or secret pair) directly, with `env:`, and
+writes a `skipped` output — `true` with an `::notice::` line naming the missing
+secret, or `false`. The channel's actual "compose and post" step then runs only
+`if: steps.check.outputs.skipped != 'true'`.
+
+This is deliberately not a job-level `if:` on the secret. A job skipped that way
+still shows as "skipped" in the checks list, which reads as pass either way, but
+carries no line of log explaining why: a maintainer who expected an announcement
+and got none has nothing to search for. Running the job unconditionally, and
+skipping only the step, means the `::notice::` always appears in that job's own
+log, and still shows up as an annotation on the run.
+
+It is also deliberately not a hard failure. A pipeline that only ever wants to
+announce to one channel must not be forced to configure both, the same reasoning
+`awstest.yml`'s optional `TOWER_ACCESS_TOKEN` already established for a
+single-channel case — but here there are two independent channels, so an
+all-or-nothing choice (fail unless every secret is set) would block a pipeline
+that only wants one of them.
+
+### Where channel enablement lives, and why
+
+There is no `ci.mastodon_enabled`-style flag in `.nf-core.yml`. Whether a
+channel is announced to is decided by whether the calling stub forwards that
+channel's secret at all — already a per-pipeline decision, made in the
+pipeline's own repo, under that pipeline's own review, the same way every other
+`secrets:` line in every stub in this repo is. A second, `.nf-core.yml`-based
+toggle would not add a capability this design lacks; it would only add a way for
+the two to disagree — a secret forwarded but the flag left off, or the reverse —
+which is a worse failure mode than the one lever this design has.
+
+### Requiring a release event
+
+`config`'s first step checks `github.event.release.tag_name` and fails the whole
+run, with `::error::`, if it is empty. This workflow's only sensible trigger is
+a published `release`; a stub that calls it from anything else (most plausibly a
+leftover `workflow_dispatch:` copied from another workflow) would otherwise
+reach `mastodon`/`bluesky` with every `github.event.release.*` field empty, and
+compose an announcement that names no tag and links to nothing. Failing once, in
+`config`, is clearer than each channel job separately discovering the same empty
+payload and posting anyway.
+
+### Why the network call is not gated the way `awsfulltest.yml`'s is
+
+`mastodon` and `bluesky` hold no `permissions:` beyond the default deny and
+check out nothing: unlike `awsfulltest.yml`'s `run-platform`, posting an
+announcement spends no compute and grants no elevated access, so there is
+nothing here for `authorize-launch`-style reviewer gating to protect. The only
+thing worth gating is the credential itself, which is what the per-channel
+secret check above already does.
+
+### Migrating from the vendored workflow
+
+- **Check names change.** The vendored workflow had two jobs, `toot` and
+  `bsky-post`. This workflow has four: `config`, `mastodon`, `bluesky`, and
+  `confirm-pass`. This workflow is not normally a required check; if a pipeline
+  has added it to branch protection anyway, point that at
+  `<stub name> / confirm-pass`.
+- **`workflow_dispatch` is gone.** See this section's own introduction above for
+  why: the vendored trigger did not actually work without a release event behind
+  it.
+- **The Bluesky secret is renamed.** `BSKY_IDENTIFIER`/`BSKY_PASSWORD` become
+  `BLUESKY_IDENTIFIER`/`BLUESKY_APP_PASSWORD` — the same values, spelled out in
+  full, and named for what Bluesky itself calls the second one (an app password,
+  not the account's own login password).
+- **The Mastodon hashtags are no longer fetched from `nf-co.re`.** The vendored
+  workflow called `https://nf-co.re/pipelines.json` at announce time to build a
+  per-pipeline hashtag list from the pipeline's own topics. This workflow uses a
+  fixed set (`#nfcore #openscience #nextflow #bioinformatics`) instead, so an
+  outage on that endpoint can no longer fail, or silently blank, an announcement
+  for an unrelated reason.
+- **The release body is now included.** The vendored workflow announced the tag,
+  the release title, and (for Mastodon only) the pipeline's own description from
+  `nf-co.re/pipelines.json` — never the release's own notes. Both channels now
+  carry a plain-text excerpt of the release body itself, truncated to fit; see
+  [Composing the text](#composing-the-text) above.
+- **The Seqera Platform debug-log migration note does not apply here**: this
+  workflow calls no third-party action at all, so there is no equivalent
+  artifact upload to fix.
+
 ## Tag policy
 
 Two different pinning rules apply, for two different trust relationships:
