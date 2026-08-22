@@ -41,3 +41,8 @@ paths:
       # Same '$/' gap as above, for this workflow's own sibling actions.
       - 'specifying action "\$/actions/(read-config|template-version)" in
         invalid format because ref is missing'
+  .github/workflows/download-pipeline.yml:
+    ignore:
+      # Same '$/' gap as above, for this workflow's own sibling actions.
+      - 'specifying action "\$/actions/(read-config|verify-offline-run)" in
+        invalid format because ref is missing'

@@ -50,7 +50,11 @@ jobs:
           pr-number: ${{ github.event.pull_request.number }}
           github-token: ${{ github.token }}
 
+      # if: always() so this still runs (and, when the step above wrote
+      # nothing, uploads nothing) if 'Compare template version' fails
+      # outright, matching the same fix in branch.yml and linting.yml.
       - name: Upload PR comment artifact
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pr-comment

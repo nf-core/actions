@@ -1487,6 +1487,142 @@ put in TypeScript. Add a `ci:` setting for one, the same way `nextflow_lint` or
   [Guarding a forked schedule](#guarding-a-forked-schedule) above; the vendored
   workflow had no such guard.
 
+## The `verify-offline-run` action
+
+The [`verify-offline-run`](actions/verify-offline-run) action checks that a
+downloaded pipeline ran without fetching anything: it compares a container cache
+directory's file listing from before and after the run.
+
+```yaml
+- name: Verify the run stayed offline
+  uses: nf-core/actions/actions/verify-offline-run@v1
+  with:
+    before-path: ${{ runner.temp }}/containers-before.txt
+    after-path: ${{ runner.temp }}/containers-after.txt
+```
+
+| Input         | Required | Purpose                                                                                      |
+| ------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `before-path` | Yes      | Path to a file listing the cache directory's contents before the run, one filename per line. |
+| `after-path`  | Yes      | Path to a file listing the cache directory's contents after the run, in the same format.     |
+
+Any name present in `after-path` but not in `before-path` was fetched while the
+pipeline ran. That means `nf-core pipelines download` did not cache everything
+the pipeline needs, so the point of downloading it — running fully offline —
+failed. The action fails and lists the offending image names; a shrunk cache
+(nothing new, some entries gone) still passes.
+
+An empty `after-path` listing also fails, naming the reason instead of the usual
+missing-image list: no pipeline run legitimately downloads zero containers, so
+an empty listing means the listing step itself did not run correctly, not that
+the run stayed offline.
+
+## The `download-pipeline.yml` workflow
+
+[`download-pipeline.yml`](.github/workflows/download-pipeline.yml) replaces a
+vendored workflow that downloaded the pipeline with
+`nf-core pipelines download`, ran the download with Nextflow, and diffed
+container counts in shell to catch anything fetched at runtime instead of from
+the cache. The comparison itself now lives in `verify-offline-run` (above), in
+TypeScript, with its own tests; everything else is the same tool calls the
+vendored workflow made.
+
+```yaml
+# .github/workflows/download-pipeline.yml in a pipeline repo
+name: nf-core download
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: 'Pipeline revision (branch, tag, or commit) to test.'
+        required: true
+        default: 'dev'
+  pull_request:
+    branches: [main, master]
+
+permissions: {}
+
+jobs:
+  download:
+    permissions:
+      contents: read
+    uses: nf-core/actions/.github/workflows/download-pipeline.yml@v1
+    with:
+      revision: ${{ github.event.inputs.revision || 'dev' }}
+```
+
+`download:` grants `contents: read`, the most any job inside
+`download-pipeline.yml` requests: only the `config` job checks out the pipeline,
+to read `.nf-core.yml`. `download` and `confirm-pass` check out nothing —
+`download` fetches the pipeline itself through `nf-core pipelines download`, and
+running the pull request's own checkout there would let it override the
+downloaded, trusted revision's own `nextflow.config` from the launch directory.
+
+The workflow downloads the pipeline at `revision`, runs it (the stub profile
+first, falling back to a full run when the pipeline does not support `-stub`),
+and fails if that run pulled a container image the download step had not already
+cached, or if the after-run container listing came back empty (see
+`verify-offline-run` above) — neither is a state a legitimate run produces. It
+always uploads `.nextflow.log*` as an artifact, including on failure, so a run
+that failed offline still leaves a log to read.
+
+### Inputs
+
+| Input      | Default | Purpose                                                                                                                                                                          |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `revision` | `'dev'` | Pipeline revision (branch, tag, or commit) to download and test.                                                                                                                 |
+| `runner`   | `''`    | Overrides the RunsOn runner label for this call only. Forwarded to `read-config`'s own `runner` input, so it wins over `.nf-core.yml` the same way any `read-config` input does. |
+
+### `.nf-core.yml` keys
+
+None beyond what `read-config` already resolves for every workflow:
+`nf_core_version` (the `nf-core` tool version to install) and `ci.runner` (the
+runner label, the same setting `nf-test.yml` reads). Which revision to download
+is a per-run choice, not a pipeline setting, so it stays a `workflow_call` input
+instead of a `.nf-core.yml` key.
+
+The `download` job guards `nf_core_version` and `template.name` (read by
+`read-config` as `pipeline-name`, and used to name the download's output
+directory) before either is used: an unset or malformed value fails with a clear
+error naming the setting, instead of a cryptic one further down the job.
+
+### Migrating from the vendored workflow
+
+- **Check names change.** The vendored workflow's jobs were `configure` and
+  `download`; this workflow's are `config`, `download`, and `confirm-pass`. If
+  branch protection lists this workflow as a required check (most pipelines do
+  not, since it is a download smoke test rather than a merge gate), point it at
+  `<stub name> / confirm-pass`, the single stable name across every run — see
+  [`linting.yml`'s `confirm-pass` job](#jobs) for the reasoning this repo uses
+  throughout: a required check that reports `skipped` counts as satisfied.
+- **The manual `testbranch` input is now `revision`, on the reusable workflow
+  itself, read through `env:`.** The vendored workflow interpolated
+  `github.event.inputs.testbranch` directly into two shell command lines (the
+  `nextflow run` invocations). A workflow_dispatch input is set by whoever
+  triggers the run — normally a maintainer, but branch protection cannot see a
+  manual dispatch coming — so this workflow reads it from an environment
+  variable instead, never a `${{ }}` expression inside a `run:` block,
+  regardless of that lower risk.
+- **The Nextflow log now uploads on failure too.** The vendored workflow's
+  upload step had no `if:` condition, so it only ran when every earlier step
+  succeeded — exactly when the log is least interesting. This workflow's
+  equivalent step runs `if: always()`.
+- **The stub-run fallback now actually triggers.** The vendored workflow guarded
+  its fallback run with a `job.steps.…` expression, a form that never evaluates
+  inside a `workflow_call`, so the fallback silently never ran. This workflow's
+  `steps.stub-run.outcome == 'failure'` condition is the fix: a pipeline whose
+  stub run has been silently skipping the fallback will see the full run happen
+  for the first time.
+- **No `jlumbroso/free-disk-space` step.** The vendored workflow ran it to work
+  around a GitHub-hosted runner's small disk. This workflow instead runs on a
+  `runner=`-labelled RunsOn runner with `volume=80gb`, the same as
+  `nf-test.yml`'s heavy job, so there is no small disk to work around.
+- **The pipeline directory name comes from `.nf-core.yml`'s `template.name`, not
+  from `basename "$GITHUB_REPOSITORY"`.** Both give the same value for a
+  correctly configured pipeline; this one also does not need a shell lowercasing
+  trick to get it.
+
 ## Tag policy
 
 Two different pinning rules apply, for two different trust relationships:
