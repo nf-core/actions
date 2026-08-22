@@ -20,6 +20,25 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    # Two majors cannot be taken yet. Both are held for a reason that a
+    # version bump alone does not fix, so dependabot must stop proposing
+    # them. Remove an entry once its reason no longer holds.
+    ignore:
+      # TypeScript 7 is a rewrite that ships no lib/*.d.ts, and the tools
+      # here exclude it by peer range: ts-jest allows '>=4.3 <7', and
+      # typescript-eslint allows '>=4.8.4 <6.1.0'. Raise this when both
+      # support 7. The '<6.1.0' cap is also why package.json pins '~6.0.3'
+      # rather than '^6'.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+      # The action runtime is node24, set by 'runs: using: node24' in every
+      # action.yml. Types for a later Node would let an API that node24 does
+      # not have pass type-check and then fail inside a pipeline's job. Raise
+      # this only together with the runtime, .node-version and engines.node.
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
     groups:
       npm-development:
         dependency-type: development
