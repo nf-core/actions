@@ -18,12 +18,38 @@ jobs:
 
     env:
       ACTIONLINT_VERSION: '1.7.12'
+      # actionlint runs shellcheck over every 'run:' block when shellcheck is
+      # on PATH, so shellcheck's version decides what this job reports. Pinning
+      # actionlint alone is not enough: the runner image supplies shellcheck,
+      # and a different version there means this job cannot be reproduced
+      # locally. A pinned pair can.
+      SHELLCHECK_VERSION: 'v0.11.0'
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Cache shellcheck binary
+        id: cache-shellcheck
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: shellcheck-bin
+          key: shellcheck-${{ env.SHELLCHECK_VERSION }}-${{ runner.os }}
+
+      - name: Install shellcheck
+        if: steps.cache-shellcheck.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p shellcheck-bin
+          curl -fsSL \
+            "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+            | tar -xJ --strip-components=1 -C shellcheck-bin \
+              "shellcheck-${SHELLCHECK_VERSION}/shellcheck"
+
+      - name: Put the pinned shellcheck first on PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/shellcheck-bin" >> "$GITHUB_PATH"
 
       - name: Cache actionlint binary
         id: cache-actionlint

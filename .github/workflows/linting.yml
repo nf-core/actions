@@ -168,7 +168,12 @@ jobs:
           mkdir -p pr-comment
           echo "$PR_NUMBER" > pr-comment/pr_number.txt
           echo "lint" > pr-comment/header.txt
-          [ -f lint_results.md ] && cp lint_results.md pr-comment/comment.md || true
+          # An 'if' rather than 'A && B || true': that form runs the fallback
+          # when the copy itself fails, so a failed copy would look the same as
+          # an absent report. A missing report is normal; a failed copy is not.
+          if [ -f lint_results.md ]; then
+            cp lint_results.md pr-comment/comment.md
+          fi
 
       - name: Upload linting log artifact
         if: always()
