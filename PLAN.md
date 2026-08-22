@@ -51,7 +51,7 @@ simplification and correctness before the next stage starts.
 | 8   | `template-version-comment.yml` workflow     | Compares the pipeline's template version against the current release and reports it on the pull request.                                                                         | Done        |
 | 9   | `branch.yml` + `clean-up.yml` workflows     | Branch protection check for release pull requests; stale issue and pull request handling.                                                                                        | Done        |
 | 10  | `download_pipeline.yml` workflow            | Tests `nf-core pipelines download` against the pipeline, including the stub run.                                                                                                 | Done        |
-| 11  | `awstest.yml` + `awsfulltest.yml` workflows | Launches small and full tests on Seqera Platform. Adds the reviewer permission check the security review requires.                                                               | Not started |
+| 11  | `awstest.yml` + `awsfulltest.yml` workflows | Launches small and full tests on Seqera Platform. Adds the reviewer permission check the security review requires.                                                               | Done        |
 | 12  | `release-announcements.yml` workflow        | Posts release announcements to the configured channels.                                                                                                                          | Not started |
 
 ## Out of scope for now
@@ -86,8 +86,8 @@ workflows above are proven. Revisit after stage 12.
   request that reads the Sentieon secrets, for the small number of pipelines
   whose stub passes them. This matches current behaviour and is documented in
   README.md's "Sentieon secret exposure" section, but whether to restrict it
-  further (for example gating on a reviewer approval, as stage 11's
-  awstest/awsfulltest reviewer check will do) is still open.
+  further (for example gating on a reviewer approval, the way stage 11's
+  `authorize-launch` now does for `awsfulltest.yml`) is still open.
 - `linting.yml` (stage 6)'s `nextflow-lint` job is opt-in through
   `ci.nextflow_lint` in `.nf-core.yml` (default `false`), fixed after review so
   adopting `@v1` cannot hand a pipeline a new failing check. rnaseq should set
@@ -119,3 +119,21 @@ workflows above are proven. Revisit after stage 12.
   an exception from, the "no third-party action in a privileged job" rule: see
   README.md's `clean-up.yml` section for why that publisher is the same trust
   tier this repo already relies on elsewhere.
+- Stage 11's `awsfulltest.yml` follows rnaseq's own `gha-security` branch (the
+  security reviewer's own hardened design for this exact gate) for the
+  permission check, the approval count, and the always-`'dev'` revision. It
+  diverges on two points: the required approval count is configurable through
+  `ci.awsfulltest_required_approvals` in `.nf-core.yml` (default 2), so a
+  pipeline with one active maintainer is not locked out of its own full test;
+  and the decision logic lives in a tested TypeScript action
+  (`actions/authorize-launch`) rather than an inline `actions/github-script`
+  block, per this file's own "TypeScript for logic" principle. See README.md's
+  `authorize-launch` section.
+- Stage 11's full-test Nextflow parameters (rnaseq's `aligner` matrix, for
+  example) stay on the pipeline's own stub as a `workflow_call` input, not in
+  `.nf-core.yml`. Unlike every other setting in this repo, they are not a shared
+  CI value: they are the pipeline's own science, and centralising them would
+  need this repo's maintainers to understand every pipeline's biology to add
+  one. See README.md's "Where the full test's parameters live, and why" for the
+  reasoning, and its own note on calling the workflow more than once for a
+  pipeline that needs more than one parameter set.

@@ -46,3 +46,13 @@ paths:
       # Same '$/' gap as above, for this workflow's own sibling actions.
       - 'specifying action "\$/actions/(read-config|verify-offline-run)" in
         invalid format because ref is missing'
+  .github/workflows/awstest.yml:
+    ignore:
+      # Same '$/' gap as above, for this workflow's own sibling action.
+      - 'specifying action "\$/actions/read-config" in invalid format because
+        ref is missing'
+  .github/workflows/awsfulltest.yml:
+    ignore:
+      # Same '$/' gap as above, for this workflow's own sibling actions.
+      - 'specifying action "\$/actions/(read-config|authorize-launch)" in
+        invalid format because ref is missing'

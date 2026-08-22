@@ -1,8 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
-import {
-  isAllowedSource,
-  isReleaseBranch
-} from '../../src/actions/branch/decide.js'
+import { isAllowedSource } from '../../src/actions/branch/decide.js'
+import { isReleaseBranch } from '../../src/lib/release-branch.js'
 
 const CANONICAL = 'nf-core/rnaseq'
 

@@ -49,6 +49,12 @@ inputs:
       Overrides 'ci.nextflow_lint' in .nf-core.yml and the built-in default
       (false).
     required: false
+  awsfulltest-required-approvals:
+    description: >-
+      Number of distinct, trusted approvals required to launch the AWS full
+      test, as a JSON number. Overrides 'ci.awsfulltest_required_approvals' in
+      .nf-core.yml and the built-in default (2).
+    required: false
 
 outputs:
   nf-test-version:
@@ -73,6 +79,10 @@ outputs:
     description: >-
       Whether to run the Nextflow strict-syntax lint, as a JSON boolean. Use
       fromJSON() in an 'if:' condition.
+  awsfulltest-required-approvals:
+    description:
+      Resolved required-approvals count, as a JSON number. Use fromJSON() to
+      compare.
   nf-core-version:
     description: >-
       nf-core template version from 'nf_core_version' in .nf-core.yml, as a

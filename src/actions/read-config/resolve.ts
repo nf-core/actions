@@ -121,10 +121,11 @@ function parseInput(setting: SettingDef, raw: string): SettingValue {
       `Input '${setting.output}' must be ${kindLabel(setting.kind)}. Got: ${raw}`
     )
   }
-  // Only max-shards is a 'number' setting today, and a shard count of zero or
-  // a fraction cannot build a matrix. If a future number setting legitimately
-  // allows zero or a fraction, give it a per-setting constraint instead of
-  // loosening this one.
+  // Every 'number' setting today (max-shards, awsfulltest-required-approvals)
+  // needs a positive integer: a shard count of zero or a fraction cannot
+  // build a matrix, and an approval count of zero or a fraction can never be
+  // reached. If a future number setting legitimately allows zero or a
+  // fraction, give it a per-setting constraint instead of loosening this one.
   if (setting.kind === 'number') {
     assertPositiveInteger(parsed as number, `Input '${setting.output}'`)
   }

@@ -94,6 +94,7 @@ ci:
   nf_test_workdir: '~'
   runner: '8cpu-linux-x64'
   nextflow_lint: true
+  awsfulltest_required_approvals: 2
 ```
 
 Omitting a key under `ci:` is normal. It means the pipeline follows the central
@@ -1622,6 +1623,471 @@ error naming the setting, instead of a cryptic one further down the job.
   from `basename "$GITHUB_REPOSITORY"`.** Both give the same value for a
   correctly configured pipeline; this one also does not need a shell lowercasing
   trick to get it.
+
+## The `authorize-launch` action
+
+The [`authorize-launch`](actions/authorize-launch) action decides whether to
+launch the AWS full test, and, when it does, which revision to launch. It is the
+gate the security review asked for: launching spends real money on
+organisation-level cloud credentials, so a pull request review alone must not be
+enough to trigger it.
+
+```yaml
+- name: Decide whether to launch
+  id: authorize
+  uses: nf-core/actions/actions/authorize-launch@v1
+  with:
+    event-name: ${{ github.event_name }}
+    github-token: ${{ github.token }}
+    repository: ${{ github.repository }}
+    sha: ${{ github.sha }}
+    required-approvals: ${{ needs.config.outputs.required-approvals }}
+    review-state: ${{ github.event.review.state }}
+    review-user: ${{ github.event.review.user.login }}
+    review-id: ${{ github.event.review.id }}
+    pr-number: ${{ github.event.pull_request.number }}
+    pr-author: ${{ github.event.pull_request.user.login }}
+    base-ref: ${{ github.event.pull_request.base.ref }}
+```
+
+The last six inputs describe a pull request review, so they only matter, and are
+only checked, for the `pull_request_review` event.
+
+### The gate, in plain words
+
+- On `workflow_dispatch` or a published `release`, it always launches. Both
+  already need write access to trigger (dispatching a workflow, or publishing a
+  release), so neither needs a second check here.
+- On a pull request review, it launches only when **this exact review** is the
+  one that brings the count of distinct, trusted approvals to the required
+  threshold. "Trusted" means the reviewer holds `write` or `admin` permission on
+  the repository, resolved through
+  `GET /repos/{owner}/{repo}/collaborators/{username}/permission`, not through
+  the review's own `author_association`. `author_association` describes a
+  relationship (member, contributor, none) fixed at the time GitHub renders it,
+  not a permission level, so a removed collaborator can still show `MEMBER` on
+  an old review. Stage 5's `branch` action made the same correction for a
+  different check; this stage makes it here too.
+- A repeat approval by someone who already has a counted approval does not add
+  to the count. An approval later dismissed, or changed to request changes,
+  stops counting from the moment it changes. A pull request's own author is
+  excluded from every count, and can never be the reviewer whose approval
+  triggers a launch — the same rule GitHub itself already enforces on
+  self-review, checked again here defensively.
+- Firing on the exact review that crosses the threshold, rather than on every
+  approval once the threshold is met, is what stops a third approval from
+  launching a second run. `authorize-launch` looks only at reviews strictly
+  before the triggering one to compute the count "before"; the triggering review
+  itself is what carries it over the line, or does not.
+- The base branch must be a release branch (`main`/`master`); see
+  [`isReleaseBranch`](#base-ref-must-be-a-release-branch-or-the-check-does-not-apply)
+  above, the same check `branch` uses, moved to `src/lib` once this became its
+  second user.
+- An approval given before the pull request's base branch was last retargeted
+  does not count towards the current base branch's threshold; see
+  [The base branch must not have changed since an earlier approval](#the-base-branch-must-not-have-changed-since-an-earlier-approval)
+  below.
+
+### Trusted revision
+
+`authorize-launch` never resolves a pull request's own commits as the revision
+to launch. For `workflow_dispatch` and `release`, the revision is the commit the
+workflow itself runs on — already maintainer-controlled by the event, not
+pull-request-controlled. For an approved pull request review, the revision is
+always the fixed string `'dev'`: the pipeline's own development branch, whatever
+it currently contains, never the reviewed pull request's branch. **The full test
+launched by an approval never runs the code under review.** This matches the
+hardened design this stage is built from (see below): reviewing and approving a
+pull request is a statement about that pull request's diff, not a request to run
+arbitrary code with organisation credentials, and the two must stay separate. A
+maintainer who wants to test the pull request's own commits uses
+`workflow_dispatch` after merging, or tests locally.
+
+### Configurable approval count, with a fixed default
+
+`required-approvals` comes from `read-config`'s own
+`awsfulltest-required-approvals` output (`ci.awsfulltest_required_approvals` in
+`.nf-core.yml`, default **2**), following the same
+[configuration precedence](#configuration-precedence) as every other setting in
+this repo. Two is deliberately not hardcoded: a pipeline with only one active
+maintainer cannot reach two trusted approvals at all, and this stage must not
+lock such a pipeline out of its own full test. Lowering it to `1` in
+`.nf-core.yml` is a real, supported choice for that pipeline — one trusted
+approval is still strictly more than the "any reviewer, no count" gap this stage
+closes. Raising it is equally supported for a pipeline that wants a stricter
+bar. Nothing here reads `required-approvals` as `0` or lower: `read-config`'s
+own number validation rejects that before `authorize-launch` ever sees it.
+
+### What it deliberately does not check
+
+`authorize-launch` does not re-verify that the pull request itself still targets
+a release branch independently of the payload, and does not re-fetch the pull
+request to confirm `pr-number` and `pr-author` match `base-ref`: all four come
+from the same `pull_request_review` event payload, which GitHub itself populates
+consistently. It also does not check whether the pull request is still open, or
+whether it was already merged: an approval on a merged pull request is unusual
+but not dangerous, since the revision launched is always `'dev'`, never the pull
+request's own commits.
+
+## The `awstest.yml` workflow
+
+[`awstest.yml`](.github/workflows/awstest.yml) replaces a vendored, per-pipeline
+workflow that launched the pipeline's small-scale test on Seqera Platform.
+Manual only: nothing here runs it automatically.
+
+```yaml
+# .github/workflows/awstest.yml in a pipeline repo
+name: nf-core AWS test
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: nf-core/actions/.github/workflows/awstest.yml@v1
+    secrets:
+      TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+```
+
+`test:` grants `contents: read`, the most any job inside `awstest.yml` asks for
+(`config`, to read `.nf-core.yml`). `TOWER_WORKSPACE_ID`, `TOWER_COMPUTE_ENV`
+and `AWS_S3_BUCKET` are repository or organisation **variables**, not secrets:
+GitHub makes the `vars` context available to a called reusable workflow the same
+way it makes `github` available, with no `with:` or `secrets:` needed to forward
+them. Only `TOWER_ACCESS_TOKEN`, a real secret, needs the explicit line above.
+
+### Secrets
+
+| Secret               | Required | Purpose                                                                                                 |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `TOWER_ACCESS_TOKEN` | Yes      | Seqera Platform access token. Optional on `workflow_call` (see below), but the launch fails without it. |
+
+`TOWER_ACCESS_TOKEN` is declared `required: false` on `workflow_call`, never
+`secrets: inherit`: a reusable workflow's secrets must be named individually, so
+a pipeline can see exactly what it is handing over. `run-platform`'s first step
+checks the secret is actually set and fails with a clear message, naming the
+secret, before attempting to launch anything — the alternative, letting the
+launch action fail on an empty token, would still stop the run but with a far
+less obvious error.
+
+### `.nf-core.yml` keys
+
+One, already read for other reusable workflows here: `template.name`, resolved
+by `read-config` as its `pipeline-name` output and used to build the S3 work and
+output directory paths. Nothing here hardcodes a pipeline name or the `nf-core`
+organisation; both the vendored workflow's templating and this workflow's
+`read-config` call solve the same problem, but this one reads it from the
+pipeline's own configuration instead of from text baked into the workflow file
+at template-generation time. `read-config` documents `pipeline-name` as an empty
+string when `template.name` is absent, true for an older pipeline; an empty
+value would collapse every S3 path below to the bucket root, so `run-platform`
+guards it, by name, before its first use — the same guard, in the same words, as
+[`download-pipeline.yml`'s](#the-download-pipelineyml-workflow).
+
+### Migrating from the vendored workflow
+
+- **Check names change.** The vendored workflow had one job, `run-platform`.
+  This workflow has three: `config`, `run-platform`, and `confirm-pass`. This
+  workflow is not normally a required check (it is a manual, on-demand test, not
+  a merge gate), but if a pipeline has added it to branch protection anyway,
+  point that at `<stub name> / confirm-pass`.
+- **The Seqera Platform debug log now uploads on failure too.** The vendored
+  workflow's upload step had no `if:` condition, so it only ran when the launch
+  step above it succeeded — exactly when the log is least interesting. This
+  workflow's equivalent step runs `if: always()`.
+- **The pipeline name comes from `.nf-core.yml`, not from the workflow file's
+  own templated text.** Both give the same value for a correctly configured
+  pipeline; this one does not go stale if the workflow file is ever copied into
+  a differently-named repository without re-running the template.
+
+## The `awsfulltest.yml` workflow
+
+[`awsfulltest.yml`](.github/workflows/awsfulltest.yml) replaces a vendored,
+per-pipeline workflow that launched the pipeline's full-scale test on Seqera
+Platform on `workflow_dispatch`, a published `release`, or a submitted pull
+request review. The security review that started this project flagged that last
+trigger: the vendored workflow checked `github.event.review.state == 'approved'`
+and nothing else about the reviewer, despite a comment in the file claiming two
+approvals were required. Anyone who could review the pull request — not
+necessarily anyone with commit access — could launch a run against
+organisation-level cloud credentials. This workflow closes that gap with
+[`authorize-launch`](#the-authorize-launch-action): see
+[The gate, in plain words](#the-gate-in-plain-words) above for the exact rule,
+and [Trusted revision](#trusted-revision) for why an approval never runs the
+reviewed pull request's own code.
+
+**This design follows a hardened branch of rnaseq (`gha-security`, its own
+author's design for this exact gate) rather than the shipped template.** That
+branch already resolves permission through the API, counts distinct trusted
+approvals against the review that crosses the threshold, and always launches
+`'dev'`, never the pull request's own commits. This workflow follows all three
+decisions. It diverges in two places: the required count is configurable here
+(see
+[Configurable approval count](#configurable-approval-count-with-a-fixed-default)
+above) rather than fixed at 2, and the decision logic lives in a tested
+TypeScript action rather than an inline `actions/github-script` block, per this
+repo's own [conventions](CONTRIBUTING.md) for where decisions belong.
+
+```yaml
+# .github/workflows/awsfulltest.yml in a pipeline repo
+name: nf-core AWS full size tests
+
+on:
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  test:
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    uses: nf-core/actions/.github/workflows/awsfulltest.yml@v1
+    with:
+      parameters: '{"aligner":"star_salmon"}'
+      slack-channel: '#pipeline-ci'
+    secrets:
+      TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+```
+
+`test:` grants `contents: read`, `pull-requests: read` and `issues: read`, the
+most any job inside `awsfulltest.yml` asks for (`config` reads `.nf-core.yml`;
+`authorize` reads collaborator permission, pull request reviews, and the pull
+request's timeline). As with `awstest.yml`, `TOWER_WORKSPACE_ID`,
+`TOWER_COMPUTE_ENV` and `AWS_S3_BUCKET` come from the `vars` context
+automatically; only the two secrets need declaring, and only when a pipeline
+actually uses Slack notification.
+
+### Inputs and secrets
+
+| Input             | Required | Purpose                                                                                                                                                                                   |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parameters`      | No       | Extra Nextflow parameters for the full test, as a JSON object string, for example `'{"aligner":"star_salmon"}'`. Merged with the `outdir` this workflow computes. Defaults to `'{}'`.     |
+| `nextflow-config` | No       | Extra Nextflow config for the full test, for example a completion notification block that names no secret. Defaults to `''`.                                                              |
+| `slack-channel`   | No       | Slack channel to notify on completion, for example `'#pipeline-ci'`. See [Do not route a secret through a string input](#do-not-route-a-secret-through-a-string-input). Defaults to `''`. |
+
+| Secret               | Required | Purpose                                                                                                                                      |
+| -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TOWER_ACCESS_TOKEN` | Yes      | Seqera Platform access token. Optional on `workflow_call`, but the launch fails without it, with a clear message, the same as `awstest.yml`. |
+| `SLACK_BOT_TOKEN`    | No       | Slack bot token for the completion notification. Omit both this and `slack-channel` to skip notification.                                    |
+
+### Where the full test's parameters live, and why
+
+`parameters` and `nextflow-config` are `workflow_call` inputs on the stub, not
+`.nf-core.yml` keys. Every other setting in this repo lives centrally, per
+PLAN.md's principle 1: a value here needs one tag move, a value in 141 pipeline
+repos needs a 141-repo campaign. The full test's own Nextflow parameters do not
+fit that principle, because they are not a shared CI setting — they are the
+pipeline's own science. rnaseq's full test runs a `aligner` matrix
+(`star_salmon`, `star_rsem`); sarek's would need a genome reference; a third
+pipeline's would need neither. Centralising these would mean this repo carries a
+per-pipeline branch for every pipeline's own parameters, growing without bound
+and needing this repo's own maintainers to understand every pipeline's science
+to add one. Keeping them on the stub, in the pipeline's own repo, under that
+pipeline's own review, is the smaller diff and the correct owner. A pipeline
+that needs more than one parameter set, the way rnaseq's `aligner` matrix does
+today, calls this workflow more than once, from separate jobs with separate
+`parameters` inputs — the same pattern `nf-test.yml`'s own `variant` input
+already establishes for a pipeline that needs to call it more than once.
+
+`parameters` is read from the stub file as committed on the pipeline's default
+branch, the same as every other `workflow_call` input: GitHub always evaluates a
+caller's own workflow file from the ref appropriate to the triggering event, not
+from pull request content, for every event this workflow supports. A pull
+request cannot change what `parameters` resolves to by editing the stub in its
+own branch.
+
+`run-platform` merges `parameters` with a centrally-computed `outdir` (so the
+stub does not have to know the S3 bucket, the pipeline name, or the resolved
+revision) before passing the result to the launch action. A top-level `outdir`
+key in the stub's own `parameters` is overridden by the computed one.
+
+### `.nf-core.yml` keys
+
+`template.name` (as `pipeline-name`, the same as `awstest.yml`) and
+`ci.awsfulltest_required_approvals` (as `required-approvals`, default `2`; see
+[Configurable approval count](#configurable-approval-count-with-a-fixed-default)
+above). `run-platform` guards `pipeline-name` before its first use, the same as
+`awstest.yml`'s own guard above.
+
+### Reading the approval threshold from a ref the pull request cannot change
+
+`ci.awsfulltest_required_approvals` gates whether a launch happens at all, so
+`config` must not read it from anything the pull request under review controls.
+On every other reusable workflow in this repository, `config`'s checkout has no
+`ref:` and that is fine, because what it reads only configures a test the pull
+request is meant to influence (which Nextflow versions to run, how many shards,
+whether an opt-in lint check runs). Here it is different: the value decides
+whether a review authorises spending organisation cloud credentials.
+
+`actions/checkout` with no `ref:` on a `pull_request_review` run checks out the
+pull request's own merge commit. Reading `.nf-core.yml` from that commit would
+let the diff under review set `ci.awsfulltest_required_approvals: 1` in its own
+change and be approved once, reproducing the "any single approval launches" gap
+this stage exists to close. `config` instead checks out
+`github.event.pull_request.base.sha`: a commit on the release branch, already
+there before this pull request existed, never something this pull request's own
+diff can set. For `workflow_dispatch` and `release`, there is no `pull_request`
+context at all, so the expression is empty and checkout falls back to its own
+default — the ref the event already runs on, already maintainer-controlled
+either way.
+
+Every other `config` job in this repository was checked for the same pattern
+while fixing this one. None of the others feed a decision like this one:
+
+- `nf-test.yml`, `linting.yml`, and `download-pipeline.yml`'s `config` jobs read
+  test settings (Nextflow versions, shard limits, the opt-in `nextflow-lint`
+  flag, the runner label, the nf-core version to install) — values a pull
+  request is meant to influence for its own run, not something that gates spend
+  or bypasses a security check. A pull request that sets its own `nextflow-lint`
+  flag, for example, can only add a check against itself, never remove one or
+  spend anything.
+- `template-version-comment.yml`'s single job reads `nf-core-version` only to
+  compare it in a report; it holds no secret and only ever writes a comment
+  artifact.
+- `fix-linting.yml`'s `prepare-fix` job checks out with no `ref:` too, but its
+  trigger is `issue_comment`, whose default ref is always the repository's
+  default branch — an `issue_comment` event has no pull-request merge ref to
+  check out in the first place, so this is safe by construction, not by
+  accident.
+- `branch.yml` and `clean-up.yml` have no `config` job and no checkout at all.
+
+### Do not route a secret through a string input
+
+An earlier version of this note told a pipeline to move its template's
+`nextflow_config` block, Slack notification included, into the stub's own
+`nextflow-config` input. That block carries a Slack bot token, and
+`nextflow-config` is a plain string `workflow_call` input, not a secret: a token
+passed that way arrives in `run-platform` without ever having been declared a
+secret to that job, so GitHub registers no mask for its value, and it then
+reaches `seqeralabs/action-tower-launch`, a third-party action whose debug log
+this workflow uploads as an artifact on every run, success or failure. That is
+an unmasked credential inside a downloadable artifact.
+
+The token is now a named, optional `workflow_call` secret, `SLACK_BOT_TOKEN`,
+paired with a plain `slack-channel` input for the (non-secret) channel name.
+`run-platform`'s "Build the Slack notification config block" step reads the
+secret only through `env:`, builds the notification block itself, and appends it
+to the pipeline's own `nextflow-config`, writing the result to `$GITHUB_OUTPUT`
+rather than echoing it. The token is registered as a secret for that job the
+moment it is referenced, so GitHub masks it in the log regardless; it never
+crosses a job boundary as a plain string, and the stub never has to build the
+notification block by hand.
+
+Every other input and secret documented for `awsfulltest.yml` and `awstest.yml`
+was checked for the same fault: `parameters` is Nextflow parameters, not a
+credential; `TOWER_ACCESS_TOKEN` was already a declared `secrets:` input, never
+a `with:` one. `SLACK_BOT_TOKEN` above was the only one that had been documented
+the wrong way.
+
+### The base branch must not have changed since an earlier approval
+
+Reviews are listed for the whole pull request, with no regard for what base
+branch the pull request targeted when each one was submitted. Without a check, a
+pull request could collect approvals while targeting `dev` — where a reviewer
+has no reason to treat an approval as authorising spend — and then have its base
+retargeted to a release branch, where one further approval crosses the threshold
+using approvals nobody gave with that in mind.
+
+`authorize-launch` reads the pull request's timeline for a `base_ref_changed`
+event. When one exists, every review submitted at or before the most recent one
+is dropped before counting: a retarget requires every needed approval to be
+given again, against the base branch actually being gated, rather than carrying
+old approvals across the change. A pull request whose base branch never changed
+is unaffected; every one of its reviews still counts.
+
+### One launch per crossing
+
+Nothing before this stage recorded that a crossing already launched, and there
+was no `concurrency` group, so re-running the workflow on the same review event
+could launch a second time. This workflow now sets a `concurrency` group keyed
+on the pull request (`awsfulltest-<repository>-<pr number>`), with
+`cancel-in-progress: false` — the same pattern `pr-comment.yml` and
+`release.yml` already use, and for the same reason: cancelling a run here would
+abandon a launch already in flight, not prevent one, so the second run must
+wait, not pre-empt the first.
+
+This closes the real race: two reviews submitted close enough together that both
+runs' `authorize` jobs read the review list before either one committed the
+other's, and both independently concluded "this is the crossing review". Queuing
+the second run behind the first means it reads the review list only after the
+first has finished, so it correctly sees the threshold already met.
+
+It does not add a persisted record of which review already triggered a launch,
+and does not need one: reaching this gate at all needs a trusted approval, and
+re-running a finished workflow run through GitHub's own UI needs write access to
+the repository — the same tier `workflow_dispatch` already needs. Per
+[What the gate does, and does not, guarantee](#what-the-gate-does-and-does-not-guarantee)
+below, anyone who can re-run a finished run already has a standing route to the
+same spend; the concurrency group closes the race between independent runs,
+which is the part a write-access holder could not already do some other way.
+
+### What the gate does, and does not, guarantee
+
+- A fork pull request cannot trigger a launch. GitHub withholds secrets from a
+  fork pull request's run, so `TOWER_ACCESS_TOKEN` is never present and the
+  launch fails before it starts, independently of anything `authorize-launch`
+  decides.
+- For a release pull request, the gate raises the bar from one approval — from
+  anyone who could leave a review at all — to the configured number of
+  approvals, each from a reviewer with write permission on the repository.
+- **It does not constrain someone who already has write access.** They can
+  launch the full test directly with `workflow_dispatch`, no review needed. And
+  because a review-triggered run reads the stub's own inputs from the pull
+  request's own copy of the file, a write-access contributor can already change
+  what a launch runs with, or repoint `uses:` entirely, on their own pull
+  request. Relying on this gate as a boundary against someone who already has
+  write access is a mistake; it was never built to be one. See PLAN.md's own
+  open decision on the equivalent question for the Sentieon secrets.
+- An approval authorises a launch of the trusted revision (`'dev'`, or a
+  maintainer-controlled `sha`; see [Trusted revision](#trusted-revision) above)
+  — never of the code under review.
+
+### Migrating from the vendored workflow
+
+- **A pull request review no longer launches on state alone.** See
+  [The gate, in plain words](#the-gate-in-plain-words) above. **A pipeline
+  adopting this workflow will find that approvals now have to come from
+  reviewers with write permission on the repository**, and that reaching the
+  required count (2 by default) is enforced, not just claimed in a comment. A
+  reviewer without write access can still leave a review; it is simply never the
+  one that launches anything.
+- **Check names change.** The vendored workflow had one job, `run-platform`.
+  This workflow has four: `config`, `authorize`, `run-platform`, and
+  `confirm-pass`. This workflow is not normally a required check; if a pipeline
+  has added it to branch protection anyway, point that at
+  `<stub name> / confirm-pass`.
+- **The launched revision for an approved review is unchanged (`'dev'`), but is
+  now computed centrally, not by an inline
+  `github.event_name == 'workflow_dispatch' ...` expression in the stub.** See
+  [Trusted revision](#trusted-revision) above.
+- **The repository guard (`github.repository == '<pipeline name>'`) is gone**,
+  for the same reason `branch.yml` dropped its own copy: calling this workflow
+  through `workflow_call` already scopes every job to whichever repository calls
+  it. A forked pipeline repository that keeps the stub gets its own
+  `vars`/`secrets`, normally unset, rather than a guard that depended on a name
+  baked into the file at template-generation time.
+- **The Seqera Platform debug log now uploads on failure too**, the same fix as
+  `awstest.yml`'s own migration note above.
+- **The `aligner` parameter matrix moves to the stub's own `with:` inputs.** See
+  [Where the full test's parameters live, and why](#where-the-full-tests-parameters-live-and-why)
+  above.
+- **The Slack notification token moves to the stub's own `secrets:` block, not
+  `with:`.** A pipeline whose template's `nextflow_config` carries a Slack bot
+  token passes it as `SLACK_BOT_TOKEN` and the channel name as `slack-channel`;
+  this workflow builds the notification block itself. See
+  [Do not route a secret through a string input](#do-not-route-a-secret-through-a-string-input)
+  above for why.
 
 ## Tag policy
 

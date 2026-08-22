@@ -1,5 +1,8 @@
 // Pure decision: is a pull request's source branch one this pipeline's
 // release branch accepts? No I/O here.
+//
+// isReleaseBranch() itself lives in src/lib/release-branch.ts, shared with
+// authorize-launch's own full-test gate; import it from there directly.
 
 export interface Source {
   /** Pull request head repository, full name (owner/repo). */
@@ -16,20 +19,6 @@ export interface Source {
 // based on the last release). Both live in the pipeline's own canonical
 // repository, never a fork.
 const ALLOWED_HEAD_REFS = ['dev', 'patch']
-
-// The pipeline's own release branches. A stub without a 'branches:
-// [main, master]' filter would otherwise call this workflow for every base
-// branch, including 'dev' itself, where the rule below does not apply.
-const RELEASE_BRANCHES = ['main', 'master']
-
-/**
- * True when `baseRef` is one of this pipeline's release branches. When it
- * is not, the source-branch rule does not apply: run.ts passes without
- * calling isAllowedSource() at all.
- */
-export function isReleaseBranch(baseRef: string): boolean {
-  return RELEASE_BRANCHES.includes(baseRef)
-}
 
 /**
  * True when `source.headRef` is 'dev' or 'patch' AND `source.headRepo` is

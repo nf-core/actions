@@ -35702,6 +35702,16 @@ const SETTINGS = [
         hasInput: true
     }),
     defineSetting({
+        output: 'awsfulltest-required-approvals',
+        configPath: 'ci.awsfulltest_required_approvals',
+        kind: 'number',
+        // Two distinct, trusted approvals. A pipeline with too few maintainers
+        // to reach that lowers it in .nf-core.yml; see README.md's awsfulltest.yml
+        // section for why this is configurable rather than fixed.
+        default: 2,
+        hasInput: true
+    }),
+    defineSetting({
         output: 'nf-core-version',
         configPath: 'nf_core_version',
         kind: 'string',
@@ -35821,10 +35831,11 @@ function parseInput(setting, raw) {
     if (!matchesKind(setting.kind, parsed)) {
         throw new Error(`Input '${setting.output}' must be ${kindLabel(setting.kind)}. Got: ${raw}`);
     }
-    // Only max-shards is a 'number' setting today, and a shard count of zero or
-    // a fraction cannot build a matrix. If a future number setting legitimately
-    // allows zero or a fraction, give it a per-setting constraint instead of
-    // loosening this one.
+    // Every 'number' setting today (max-shards, awsfulltest-required-approvals)
+    // needs a positive integer: a shard count of zero or a fraction cannot
+    // build a matrix, and an approval count of zero or a fraction can never be
+    // reached. If a future number setting legitimately allows zero or a
+    // fraction, give it a per-setting constraint instead of loosening this one.
     if (setting.kind === 'number') {
         assertPositiveInteger(parsed, `Input '${setting.output}'`);
     }

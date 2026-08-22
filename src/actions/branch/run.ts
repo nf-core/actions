@@ -1,10 +1,11 @@
 import * as core from '@actions/core'
 import { escapeHtml } from '../../lib/escape-html.js'
 import { assertPositiveInteger } from '../../lib/positive-integer.js'
+import { isReleaseBranch } from '../../lib/release-branch.js'
 import { writeSummaryBestEffort } from '../../lib/write-summary.js'
 import { writeArtifact } from './artifact.js'
 import { buildComment } from './comment.js'
-import { isAllowedSource, isReleaseBranch } from './decide.js'
+import { isAllowedSource } from './decide.js'
 
 const DEFAULT_ARTIFACT_DIR = 'pr-comment'
 

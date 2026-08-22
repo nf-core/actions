@@ -96,6 +96,16 @@ export const SETTINGS: readonly SettingDef[] = [
     hasInput: true
   }),
   defineSetting({
+    output: 'awsfulltest-required-approvals',
+    configPath: 'ci.awsfulltest_required_approvals',
+    kind: 'number',
+    // Two distinct, trusted approvals. A pipeline with too few maintainers
+    // to reach that lowers it in .nf-core.yml; see README.md's awsfulltest.yml
+    // section for why this is configurable rather than fixed.
+    default: 2,
+    hasInput: true
+  }),
+  defineSetting({
     output: 'nf-core-version',
     configPath: 'nf_core_version',
     kind: 'string',
