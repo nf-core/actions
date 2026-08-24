@@ -1262,13 +1262,21 @@ instead of reading a `.nf-core.yml` setting. A pipeline that genuinely needs a
 different rule does not call this workflow.
 
 `isAllowedSource()` also requires `head-repo` to equal `repository` for a
-`patch` branch, not only for `dev`. The vendored shell check this replaces did
-not: `[[ "$GITHUB_HEAD_REF" == "patch" ]]` on its own let a pull request from
-any fork with a branch literally named `patch` past the check, regardless of
-which repository it came from. nf-core's own patch branches live in the
-pipeline's canonical repository (confirmed against rnaseq's own git history: its
-`patch` branch merges have always come from `nf-core/rnaseq:patch`, never a
-fork), so this closes that gap rather than reproducing it.
+`patch` branch, not only for `dev`. **This is a deliberate change, not a bug
+fix.** The vendored check allowed `patch` from any repository on purpose: its
+own comment reads "the nf-core repo `dev` or any `patch` branches", so
+`[[ "$GITHUB_HEAD_REF" == "patch" ]]` standing alone was intended, and a fork
+branch named `patch` passed by design.
+
+nf-core chose to drop that allowance. A hotfix straight to a release branch is
+rare, and it belongs in the pipeline's own repository: rnaseq's `patch` merges
+have always come from `nf-core/rnaseq:patch`, never a fork. The cost is that a
+contributor without write access can no longer open a hotfix pull request
+directly against a release branch from their fork. They target `dev` instead,
+and the rejection comment tells them so.
+
+Do not widen this back on the assumption that a repository check is missing from
+`patch`. It was removed knowingly.
 
 ### `base-ref` must be a release branch, or the check does not apply
 
@@ -1609,12 +1617,11 @@ error naming the setting, instead of a cryptic one further down the job.
   upload step had no `if:` condition, so it only ran when every earlier step
   succeeded — exactly when the log is least interesting. This workflow's
   equivalent step runs `if: always()`.
-- **The stub-run fallback now actually triggers.** The vendored workflow guarded
-  its fallback run with a `job.steps.…` expression, a form that never evaluates
-  inside a `workflow_call`, so the fallback silently never ran. This workflow's
-  `steps.stub-run.outcome == 'failure'` condition is the fix: a pipeline whose
-  stub run has been silently skipping the fallback will see the full run happen
-  for the first time.
+- **The stub-run fallback behaves as before.** The vendored workflow already
+  guarded it correctly, with `continue-on-error: true` on the stub run and
+  `steps.<id>.outcome == 'failure'` on the fallback. `outcome` is the result
+  before `continue-on-error` applies, so that condition does fire; `conclusion`
+  would not have. This workflow keeps the same pair.
 - **No `jlumbroso/free-disk-space` step.** The vendored workflow ran it to work
   around a GitHub-hosted runner's small disk. This workflow instead runs on a
   `runner=`-labelled RunsOn runner with `volume=80gb`, the same as

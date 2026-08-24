@@ -28790,11 +28790,17 @@ Thanks for contributing to nf-core!
 const ALLOWED_HEAD_REFS = ['dev', 'patch'];
 /**
  * True when `source.headRef` is 'dev' or 'patch' AND `source.headRepo` is
- * the pipeline's own canonical repository. Requiring the repository match
- * for 'patch' too, not only 'dev', closes a gap the vendored check this
- * replaces did not: that check allowed a branch literally named 'patch' in
- * ANY repository, including an unrelated fork, past its release-branch
- * guard.
+ * the pipeline's own canonical repository.
+ *
+ * This is deliberately narrower than the vendored check it replaces, which
+ * required the canonical repository for 'dev' but not for 'patch'. That was
+ * intentional in the original, not an oversight: its own comment reads "the
+ * nf-core repo `dev` or any `patch` branches", so a branch named 'patch' in
+ * any fork passed. nf-core chose to drop that allowance, because a hotfix to
+ * a release branch is rare and belongs in the pipeline's own repository.
+ *
+ * Do not widen this back without asking. It looks like a missing repository
+ * check and it is not.
  */
 function isAllowedSource(source) {
     return (source.headRepo === source.canonicalRepo &&
