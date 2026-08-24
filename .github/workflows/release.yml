@@ -24,6 +24,7 @@ jobs:
   prepare:
     name: Prepare release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       version: ${{ steps.validate.outputs.version }}
       major: ${{ steps.validate.outputs.major }}
@@ -105,6 +106,7 @@ jobs:
       - prepare
       - verify
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Required reviewers on this environment gate every tag move.
     environment: release
     permissions:

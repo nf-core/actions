@@ -180,6 +180,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linting-logs
+          retention-days: 7
           path: |
             lint_log.txt
             lint_results.md
@@ -189,6 +190,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pr-comment
+          retention-days: 1
           path: pr-comment/
 
   nextflow-lint:
@@ -237,6 +239,7 @@ jobs:
     needs: [config, pre-commit, nf-core, nextflow-lint]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions: {}
     steps:
       - name: Fail if a required job failed or was cancelled
