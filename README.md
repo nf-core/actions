@@ -403,15 +403,25 @@ pipeline called, because it is the same resolution, not a new one.
 actionlint v1.7.12; `.github/actionlint.yaml` carries a narrow, named `ignore`
 rule for exactly this, to remove once actionlint catches up.
 
-**Operational prerequisite.** `$/` needs Actions runner **2.336.0 or later**,
-and does not exist on **GitHub Enterprise Server** at all. Most of this
-workflow's jobs run on self-hosted runners that RunsOn provisions; this repo
-does not control the runner version on that fleet. If a runner in the fleet is
-older than 2.336.0, every job in every pipeline that calls this workflow fails
-at action resolution, with an error that does not mention the runner version (it
-reads as the action reference being invalid, not as a version problem). Confirm
-with whoever maintains the RunsOn fleet that its runners are kept at 2.336.0 or
-later before relying on this workflow.
+**Runner version: checked, and self-maintaining.** `$/` needs Actions runner
+**2.336.0 or later**, and does not exist on **GitHub Enterprise Server** at all.
+Most of this workflow's jobs run on self-hosted runners that RunsOn provisions,
+and this repo does not set the runner version on that fleet. That requirement is
+met, and three facts together mean it stays met:
+
+- The fleet already runs 2.336.0. An nf-core/rnaseq `Run nf-test` job on
+  2026-08-22 logged `Current runner version: '2.336.0'` on a runner named
+  `runs-on--i-0f99821ad8e757be7-…`.
+- 2.336.0 is the latest release of `actions/runner` (published 2026-07-20), so
+  the fleet tracks the current runner rather than pinning an old one.
+- A runner updates itself before it takes a job, and GitHub stops queueing jobs
+  to a runner that has not updated within 30 days of a release. A fleet cannot
+  silently fall behind: it either updates or stops receiving work.
+
+If a runner ever is older than 2.336.0, every job in every pipeline that calls
+this workflow fails at action resolution, with an error that reads as the action
+reference being invalid rather than as a version problem. That is the symptom to
+recognise, not a thing to pre-empt.
 
 ### The `pr-comment` artifact
 

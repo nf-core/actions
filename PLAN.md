@@ -89,13 +89,10 @@ matrix already establishes for a single provider.
   silently drop it. Needs a pull request against nf-core/tools adding `ci:` as
   an optional, permissive field.
 - `.github/actionlint.yaml` ignores one error so the `$/` sibling-action
-  references lint clean, because actionlint v1.7.12 predates that syntax. Remove
-  the ignore once actionlint recognises `$/`.
-- `$/` needs Actions runner 2.336.0 or later, and does not exist on GitHub
-  Enterprise Server. Confirm with whoever maintains the RunsOn fleet that its
-  runners stay at or above that version. A lagging fleet fails every job in
-  every pipeline at action resolution, with an error that does not mention the
-  runner version.
+  references lint clean. actionlint v1.7.12 is its latest release (2026-03-30)
+  and predates the `$/` announcement (2026-07-30), so there is nothing newer to
+  upgrade to yet. Checked 2026-08-24. Remove the ignore once a release
+  recognises `$/`.
 
 ### Open decision for the team
 
