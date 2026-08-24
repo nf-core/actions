@@ -85,9 +85,11 @@ matrix already establishes for a single provider.
 ### Depends on another repository or team
 
 - nf-core/tools' `NFCoreYamlConfig` Pydantic model rebuilds `.nf-core.yml` from
-  known fields, and does not know about the `ci:` block. A rebuild could
-  silently drop it. Needs a pull request against nf-core/tools adding `ci:` as
-  an optional, permissive field.
+  known fields, so a `sync` or `bump-version` would drop the `ci:` block.
+  [nf-core/tools#4453](https://github.com/nf-core/tools/pull/4453) adds it as a
+  permissive `dict`, with a round-trip test. Open, not merged, as of 2026-08-24.
+  Until it merges, a pipeline that sets any `ci:` key can lose it on the next
+  sync, so do not rely on `ci:` for a pipeline that syncs before then.
 - `.github/actionlint.yaml` ignores one error so the `$/` sibling-action
   references lint clean. actionlint v1.7.12 is its latest release (2026-03-30)
   and predates the `$/` announcement (2026-07-30), so there is nothing newer to
