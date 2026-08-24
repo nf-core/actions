@@ -82,78 +82,43 @@ matrix already establishes for a single provider.
 
 ## Follow-ups
 
+### Outstanding work in this repository
+
+- `nf-test.yml` produces no pull request comment when a run against Nextflow's
+  floating `latest` version fails. That job uses `continue-on-error`, so the
+  failure never reaches the job result and a maintainer only sees it by opening
+  that exact matrix job. rnaseq's own `nf-test.yml` builds a comment fragment
+  per failed shard and uploads a `pr-comment` artifact for the poster to
+  publish. This workflow does not, so a pipeline that migrates loses that
+  signal: an upstream Nextflow regression becomes invisible. Stage 4 deferred
+  the producer side until `pr-comment.yml` existed. It exists, so this is simply
+  unfinished.
+
+### Depends on another repository or team
+
 - nf-core/tools' `NFCoreYamlConfig` Pydantic model rebuilds `.nf-core.yml` from
-  known fields. It does not know about the `ci:` block that stage 1 introduced,
-  so a rebuild could silently drop it. Add `ci:` to that model as an optional,
-  permissive field so nf-core/tools round-trips it.
-- Config loading (`loadConfig`, the ENOENT check, workspace-relative path
-  resolution) lives in `src/actions/read-config/run.ts`. Extract it to
-  `src/lib/config.ts` when a second action needs to read `.nf-core.yml`, so it
-  is not re-derived or copy-pasted.
-- `nf-test.yml` (stage 4) does not build a PR-comment artifact for a failed
-  `latest-everything` run. `pr-comment.yml` (stage 7) now exists to post it;
-  wire the producer side into `nf-test.yml` as a follow-up, instead of bundling
-  it into stage 7 itself.
-- `.github/actionlint.yaml` ignores one specific error so `nf-test.yml`'s `$/`
-  sibling-action references lint clean: actionlint v1.7.12 predates that GitHub
-  Actions syntax. Remove the ignore once actionlint recognises `$/`.
-- `$/` needs Actions runner 2.336.0 or later and does not exist on GitHub
+  known fields, and does not know about the `ci:` block. A rebuild could
+  silently drop it. Needs a pull request against nf-core/tools adding `ci:` as
+  an optional, permissive field.
+- `.github/actionlint.yaml` ignores one error so the `$/` sibling-action
+  references lint clean, because actionlint v1.7.12 predates that syntax. Remove
+  the ignore once actionlint recognises `$/`.
+- `$/` needs Actions runner 2.336.0 or later, and does not exist on GitHub
   Enterprise Server. Confirm with whoever maintains the RunsOn fleet that its
-  runners are kept at 2.336.0 or later, since a lagging fleet fails every job in
-  every pipeline at action resolution. See README.md's "Referencing the sibling
-  actions" note.
-- Open decision: a contributor with write access can open a same-repository pull
-  request that reads the Sentieon secrets, for the small number of pipelines
-  whose stub passes them. This matches current behaviour and is documented in
-  README.md's "Sentieon secret exposure" section, but whether to restrict it
-  further (for example gating on a reviewer approval, the way stage 11's
-  `authorize-launch` now does for `awsfulltest.yml`) is still open.
-- `linting.yml` (stage 6)'s `nextflow-lint` job is opt-in through
-  `ci.nextflow_lint` in `.nf-core.yml` (default `false`), fixed after review so
-  adopting `@v1` cannot hand a pipeline a new failing check. rnaseq should set
-  `ci.nextflow_lint: true`, since it already runs this check today from its own
-  `nextflow-lint.yml`.
-- `linting.yml` (stage 6) has no `ci:` setting for `nextflow lint`'s `-exclude`
-  flag: its own default list already covers every generated or tool directory a
-  pipeline has, and no pipeline has needed a different one since. Add
-  `ci.nextflow_lint_exclude` (a string-list, the same shape as `profiles`) if
-  one genuinely does.
-- Resolved by stage 9: `pr-comment.yml` (stage 7)'s example stub now lists all
-  four producer workflows the vendored workflow it replaces watched, including
-  `nf-core branch protection` (`branch.yml`, stage 9).
-- Resolved by stage 9: the shared `pr-comment` artifact writer moved to
-  `src/lib/pr-comment-artifact.ts`, once `branch.yml`'s own `branch` action
-  became the second user, per this file's own convention of moving shared code
-  at the point a second user needs it. `template-version/artifact.ts` now
-  delegates to it.
-- Stage 9's `branch.yml` fixed a gap in the vendored check it replaces: a pull
-  request from an unrelated fork with a branch literally named `patch` used to
-  pass the branch-protection check (`[[ "$GITHUB_HEAD_REF" == "patch" ]]` alone,
-  with no repository check). The new `isAllowedSource()` requires the head
-  repository to match the pipeline's own canonical repository for `patch`, the
-  same as it already did for `dev`. See README.md's `branch` action section.
-- Stage 9's `clean-up.yml` keeps `actions/stale` (GitHub's own `actions`
-  organisation, the same publisher as `actions/checkout` and
-  `actions/upload-artifact`) inside its privileged job, rather than
-  reimplementing stale-issue handling by hand. This honours, rather than needs
-  an exception from, the "no third-party action in a privileged job" rule: see
-  README.md's `clean-up.yml` section for why that publisher is the same trust
-  tier this repo already relies on elsewhere.
-- Stage 11's `awsfulltest.yml` follows rnaseq's own `gha-security` branch (the
-  security reviewer's own hardened design for this exact gate) for the
-  permission check, the approval count, and the always-`'dev'` revision. It
-  diverges on two points: the required approval count is configurable through
-  `ci.awsfulltest_required_approvals` in `.nf-core.yml` (default 2), so a
-  pipeline with one active maintainer is not locked out of its own full test;
-  and the decision logic lives in a tested TypeScript action
-  (`actions/authorize-launch`) rather than an inline `actions/github-script`
-  block, per this file's own "TypeScript for logic" principle. See README.md's
-  `authorize-launch` section.
-- Stage 11's full-test Nextflow parameters (rnaseq's `aligner` matrix, for
-  example) stay on the pipeline's own stub as a `workflow_call` input, not in
-  `.nf-core.yml`. Unlike every other setting in this repo, they are not a shared
-  CI value: they are the pipeline's own science, and centralising them would
-  need this repo's maintainers to understand every pipeline's biology to add
-  one. See README.md's "Where the full test's parameters live, and why" for the
-  reasoning, and its own note on calling the workflow more than once for a
-  pipeline that needs more than one parameter set.
+  runners stay at or above that version. A lagging fleet fails every job in
+  every pipeline at action resolution, with an error that does not mention the
+  runner version.
+
+### Open decision for the team
+
+- A contributor with write access can open a same-repository pull request that
+  reads the Sentieon secrets, for the pipelines whose stub passes them. This
+  matches behaviour before the migration and is documented in README.md's
+  "Sentieon secret exposure" section. Whether to restrict it further, for
+  example by gating on an approval the way `awsfulltest.yml` now does, is open.
+
+### Rollout task
+
+- rnaseq should set `ci.nextflow_lint: true`. It already runs that check today
+  from its own `nextflow-lint.yml`, and the setting defaults to `false` so that
+  adopting `@v1` cannot hand any other pipeline a new failing check.
