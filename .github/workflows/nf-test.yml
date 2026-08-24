@@ -222,6 +222,7 @@ jobs:
           channels: conda-forge,bioconda
 
       - name: Run nf-test
+        id: run-nf-test
         uses: $/actions/nf-test
         # A regression only in Nextflow's floating 'latest' alias should not
         # block CI: report it without failing the run.
@@ -242,6 +243,40 @@ jobs:
           total-shards: ${{ needs.nf-test-changes.outputs.total-shards }}
           changed-since: ${{ needs.config.outputs.changed-since }}
 
+      # A failure here only matters on a pull request (pr_number.txt would
+      # be blank otherwise) and only for the floating 'latest' leg: every
+      # other failure already fails this job directly, so 'confirm-pass'
+      # already reports it without a comment. 'always()' so this still runs
+      # when 'Run nf-test' itself failed outright, matching the same fix in
+      # linting.yml and template-version-comment.yml. 'strategy.job-index' in
+      # both the file name and the artifact name keeps every parallel leg
+      # from colliding, including after 'confirm-pass' merges every
+      # artifact's files into one directory.
+      - name: Prepare PR comment fragment
+        if:
+          always() && github.event_name == 'pull_request' &&
+          steps.run-nf-test.outcome == 'failure' && contains(matrix.nxf-version,
+          'latest')
+        env:
+          PROFILE: ${{ matrix.profile }}
+          NXF_VERSION: ${{ matrix.nxf-version }}
+          SHARD: ${{ matrix.shard }}
+          TOTAL_SHARDS: ${{ needs.nf-test-changes.outputs.total-shards }}
+          JOB_INDEX: ${{ strategy.job-index }}
+        run: |
+          mkdir -p pr-comment-fragment
+          echo "* \`$PROFILE\` | \`$NXF_VERSION\` | shard $SHARD/$TOTAL_SHARDS" > "pr-comment-fragment/${JOB_INDEX}.md"
+
+      - name: Upload PR comment fragment
+        if:
+          always() && github.event_name == 'pull_request' &&
+          steps.run-nf-test.outcome == 'failure' && contains(matrix.nxf-version,
+          'latest')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nf-test-comment-fragment-${{ strategy.job-index }}
+          path: pr-comment-fragment/
+
   # Single, stable check name for branch protection: it reports the combined
   # result of every job above, and always runs so the check exists even when
   # one of them was skipped or failed.
@@ -257,3 +292,37 @@ jobs:
           contains(needs.*.result, 'failure') || contains(needs.*.result,
           'cancelled')
         run: exit 1
+
+      # Only a pull_request event has a pull request to comment on;
+      # pr_number.txt would be blank otherwise (same gate as linting.yml and
+      # template-version-comment.yml). 'always()' throughout so a failed or
+      # cancelled matrix leg above still gets reported here, instead of this
+      # step being skipped along with it.
+      - name: Download PR comment fragments
+        if: always() && github.event_name == 'pull_request'
+        # No fragment artifact exists when no leg against Nextflow's
+        # 'latest' version failed, which is the normal case. continue-on-error
+        # keeps that normal case from failing this job.
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: nf-test-comment-fragment-*
+          path: pr-comment-fragments
+          merge-multiple: true
+
+      - name: Build PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: $/actions/nf-test-comment
+        with:
+          fragments-path: pr-comment-fragments
+          pr-number: ${{ github.event.pull_request.number }}
+          run-url:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}
+
+      - name: Upload PR comment artifact
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-comment
+          path: pr-comment/

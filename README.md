@@ -413,6 +413,37 @@ reads as the action reference being invalid, not as a version problem). Confirm
 with whoever maintains the RunsOn fleet that its runners are kept at 2.336.0 or
 later before relying on this workflow.
 
+### The `pr-comment` artifact
+
+A matrix leg against Nextflow's floating `latest-everything` version uses
+`continue-on-error`, so its failure never reaches `confirm-pass`'s own result: a
+maintainer would otherwise see it only by opening that exact job. Every other
+leg (any other Nextflow version) still fails the job directly on any failure, so
+it needs no comment of its own.
+
+A leg that fails this way,
+`if: always() && github.event_name == 'pull_request'`, writes a one-line
+fragment naming its profile, Nextflow version and shard, and uploads it under
+its own artifact name (`nf-test-comment-fragment-<strategy.job-index>`), so
+parallel legs cannot collide.
+
+`confirm-pass` downloads every fragment and hands them to the
+[`nf-test-comment`](actions/nf-test-comment) action,
+`if: always() && github.event_name == 'pull_request'`, which assembles a
+`pr-comment` artifact for [`pr-comment.yml`](#the-pr-commentyml-workflow) to
+read:
+
+| File            | Contents                                                                                                                                                                                                                                                                                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr_number.txt` | The pull request number, as plain text.                                                                                                                                                                                                                                                                                                                                |
+| `header.txt`    | `nf-test-latest`. Distinct from `lint`, `branch` and `template-version`, the other headers this repo writes, so none of the four can ever collide.                                                                                                                                                                                                                     |
+| `comment.md`    | One bullet per failed leg, capped at 200 lines with an "…and N more" note beyond that, plus a link to the full run. **Absent** when every `latest-everything` leg passed, or none ran.                                                                                                                                                                                 |
+| `resolved.md`   | Present exactly when `comment.md` is absent: states that nf-test now passes against Nextflow's latest version. Lets `post-comment` update an earlier failure comment away once a later push, or an upstream Nextflow fix, resolves it. Unlike `branch.yml`'s decision, this one can flip back on a later push, so it is worth checking on every run, not settled once. |
+
+Gating every one of these steps on `github.event_name == 'pull_request'` keeps a
+`release` or `workflow_dispatch` run from uploading an artifact with a blank
+`pr_number.txt`.
+
 ### Migrating from a pipeline's own `nf-test.yml`
 
 - **Check names**: `nf-test-changes`, `nf-test`, and `confirm-pass` keep their
@@ -427,10 +458,12 @@ later before relying on this workflow.
   secret is empty, not from the event type. A pipeline that skipped Sentieon
   tests on conda for reasons other than missing secrets needs to express that in
   its own nf-test tags instead.
-- **The PR-comment artifact for a failed `latest-everything` run is not built
-  yet.** That lands with the `pr-comment.yml` workflow; until then, a
-  `latest-everything` failure shows only as a non-blocking, orange check and in
-  that job's own summary.
+- **A failed `latest-everything` leg now posts a pull request comment**, from
+  the `pr-comment` artifact described above, instead of showing only as a
+  non-blocking, orange check and in that job's own summary. The pipeline's
+  `pr-comment.yml` stub must list `nf-test` in its `workflows:` watch list (see
+  [The `pr-comment.yml` workflow](#the-pr-commentyml-workflow)) or this comment
+  is produced and never posted.
 
 ### Sentieon secret exposure
 

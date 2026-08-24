@@ -82,18 +82,6 @@ matrix already establishes for a single provider.
 
 ## Follow-ups
 
-### Outstanding work in this repository
-
-- `nf-test.yml` produces no pull request comment when a run against Nextflow's
-  floating `latest` version fails. That job uses `continue-on-error`, so the
-  failure never reaches the job result and a maintainer only sees it by opening
-  that exact matrix job. rnaseq's own `nf-test.yml` builds a comment fragment
-  per failed shard and uploads a `pr-comment` artifact for the poster to
-  publish. This workflow does not, so a pipeline that migrates loses that
-  signal: an upstream Nextflow regression becomes invisible. Stage 4 deferred
-  the producer side until `pr-comment.yml` existed. It exists, so this is simply
-  unfinished.
-
 ### Depends on another repository or team
 
 - nf-core/tools' `NFCoreYamlConfig` Pydantic model rebuilds `.nf-core.yml` from
