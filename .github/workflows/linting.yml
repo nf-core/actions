@@ -128,6 +128,21 @@ jobs:
               ;;
           esac
 
+          # Below 4.0.0, 'nf-core pipelines lint --release' rewrites
+          # modules.json through ModulesJson.dump(run_prettier=True), which
+          # shells out to a literal 'pre-commit' binary this job never
+          # installs, and crashes with an unhandled FileNotFoundError before
+          # lint_results.md is written, so no PR comment explains why
+          # (nf-core/actions#15). 4.0.0 replaced that call with 'prek',
+          # which is nf-core/tools' own declared dependency, so 'uv tool
+          # install nf-core' below already provides it. Fail here with a
+          # clear reason instead of that traceback.
+          nf_core_major="${NF_CORE_VERSION%%.*}"
+          if [ "$nf_core_major" -lt 4 ] 2>/dev/null; then
+            echo "::error::'nf_core_version' in .nf-core.yml is '$NF_CORE_VERSION'. Versions before 4.0.0 shell out to a 'pre-commit' binary this job does not install, and 'nf-core pipelines lint --release' crashes the first time it needs to rewrite modules.json. Bump 'nf_core_version' to 4.0.0 or later." >&2
+            exit 1
+          fi
+
       - name: Install nf-core
         env:
           NF_CORE_VERSION: ${{ needs.config.outputs.nf-core-version }}
