@@ -29844,10 +29844,7 @@ function escapeHtml(text) {
  * avoids a cross-realm false negative under Jest's experimental VM modules.
  */
 function isEnoent(error) {
-    return (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'ENOENT');
+    return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
 }
 
 // Pure classification of a non-regular-file fs.Stats, for the "not a regular
