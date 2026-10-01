@@ -33,12 +33,7 @@ const config = entries.map(({ name, entry }) => ({
     // No sourcemap, no minification: dist/ is committed, see .github/CONTRIBUTING.md.
   },
   // noCheck: tsc --noEmit (npm run type-check) owns type-checking, not Rollup.
-  plugins: [
-    typescript({ noCheck: true }),
-    nodeResolve({ preferBuiltins: true }),
-    commonjs(),
-    emitEsmPackageJson()
-  ]
+  plugins: [typescript({ noCheck: true }), nodeResolve({ preferBuiltins: true }), commonjs(), emitEsmPackageJson()]
 }))
 
 export default config

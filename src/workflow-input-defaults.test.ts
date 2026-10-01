@@ -23,15 +23,9 @@ const workflowsDir = join(import.meta.dirname, '../.github/workflows')
 /** Input name -> every workflow that declares it, with its declaration. */
 function inputsByName(): Map<string, { file: string; def: InputDef }[]> {
   const byName = new Map<string, { file: string; def: InputDef }[]>()
-  for (const file of readdirSync(workflowsDir).filter((f) =>
-    f.endsWith('.yml')
-  )) {
-    const workflow = parse(
-      readFileSync(join(workflowsDir, file), 'utf8')
-    ) as WorkflowYaml
-    for (const [name, def] of Object.entries(
-      workflow.on?.workflow_call?.inputs ?? {}
-    )) {
+  for (const file of readdirSync(workflowsDir).filter((f) => f.endsWith('.yml'))) {
+    const workflow = parse(readFileSync(join(workflowsDir, file), 'utf8')) as WorkflowYaml
+    for (const [name, def] of Object.entries(workflow.on?.workflow_call?.inputs ?? {})) {
       byName.set(name, [...(byName.get(name) ?? []), { file, def }])
     }
   }
@@ -63,9 +57,7 @@ describe('reusable workflow input defaults', () => {
         const parsed: unknown = JSON.parse(String(def.default))
         expect(Array.isArray(parsed)).toBe(true)
         expect((parsed as unknown[]).length).toBeGreaterThan(0)
-        expect((parsed as unknown[]).every((v) => typeof v === 'string')).toBe(
-          true
-        )
+        expect((parsed as unknown[]).every((v) => typeof v === 'string')).toBe(true)
       }
     }
   })

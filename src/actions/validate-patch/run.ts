@@ -18,9 +18,7 @@ interface Inputs {
 function readInputs(): Inputs {
   return {
     patchPath: core.getInput('patch-path', { required: true }),
-    maxSizeBytes: parseMaxSizeBytes(
-      core.getInput('max-size-bytes') || String(DEFAULT_MAX_SIZE_BYTES)
-    )
+    maxSizeBytes: parseMaxSizeBytes(core.getInput('max-size-bytes') || String(DEFAULT_MAX_SIZE_BYTES))
   }
 }
 
@@ -40,10 +38,7 @@ interface GitApplyResult {
  * which would otherwise reopen the same injection.
  */
 async function gitApply(args: string[]): Promise<GitApplyResult> {
-  await requireOnPath(
-    'git',
-    'The calling workflow must have git on PATH before this action runs.'
-  )
+  await requireOnPath('git', 'The calling workflow must have git on PATH before this action runs.')
   core.info(`Running: git ${JSON.stringify(args)}`)
   return getExecOutput('git', ['apply', ...args], {
     ignoreReturnCode: true,

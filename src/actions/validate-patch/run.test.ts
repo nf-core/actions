@@ -8,14 +8,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  jest
-} from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
 
 const getInput = jest.fn<(name: string) => string>()
 const info = jest.fn()
@@ -92,11 +85,10 @@ describe('validate-patch', () => {
   /** Builds a patch by editing file.txt, diffing it, then reverting the edit. */
   function buildValidPatch(): string {
     writeFileSync(join(repoDir, 'file.txt'), 'b\n')
-    const diff = execFileSync(
-      'git',
-      ['diff', '--binary', '--no-ext-diff', 'file.txt'],
-      { cwd: repoDir, encoding: 'utf8' }
-    )
+    const diff = execFileSync('git', ['diff', '--binary', '--no-ext-diff', 'file.txt'], {
+      cwd: repoDir,
+      encoding: 'utf8'
+    })
     git(repoDir, ['checkout', '--quiet', '--', 'file.txt'])
     const patchPath = join(repoDir, 'the.patch')
     writeFileSync(patchPath, diff)
@@ -174,11 +166,10 @@ describe('validate-patch', () => {
     // Without a '--' separator before the path, git would try to parse
     // '-dash-name.patch' as an option instead of a filename.
     writeFileSync(join(repoDir, 'file.txt'), 'b\n')
-    const diff = execFileSync(
-      'git',
-      ['diff', '--binary', '--no-ext-diff', 'file.txt'],
-      { cwd: repoDir, encoding: 'utf8' }
-    )
+    const diff = execFileSync('git', ['diff', '--binary', '--no-ext-diff', 'file.txt'], {
+      cwd: repoDir,
+      encoding: 'utf8'
+    })
     git(repoDir, ['checkout', '--quiet', '--', 'file.txt'])
     const dashName = '-dash-name.patch'
     writeFileSync(join(repoDir, dashName), diff)
@@ -196,8 +187,6 @@ describe('validate-patch', () => {
 
     await run()
 
-    expect(info).toHaveBeenCalledWith(
-      expect.stringContaining('Touched files: ["file.txt"]')
-    )
+    expect(info).toHaveBeenCalledWith(expect.stringContaining('Touched files: ["file.txt"]'))
   })
 })

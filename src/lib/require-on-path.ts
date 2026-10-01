@@ -6,10 +6,7 @@ import { which } from '@actions/io'
  * throwing when the tool is missing, so the empty-string case is checked
  * explicitly here.
  */
-export async function requireOnPath(
-  tool: string,
-  installHint: string
-): Promise<void> {
+export async function requireOnPath(tool: string, installHint: string): Promise<void> {
   if ((await which(tool)) === '') {
     throw new Error(`${tool} is not on PATH. ${installHint}`)
   }

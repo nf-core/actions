@@ -22,10 +22,7 @@ export default tseslint.config(
     // Type-aware rules for the real source, not build scripts or tests.
     files: ['src/**/*.ts'],
     ignores: ['**/*.test.ts'],
-    extends: [
-      tseslint.configs.strictTypeChecked,
-      tseslint.configs.stylisticTypeChecked
-    ],
+    extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
     languageOptions: {
       parserOptions: {
         projectService: true,

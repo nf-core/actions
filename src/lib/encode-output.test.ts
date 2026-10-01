@@ -16,9 +16,7 @@ describe('encodeOutput', () => {
   })
 
   it('encodes a string array as JSON, for fromJSON() on the other end', () => {
-    expect(encodeOutput(['docker', 'singularity'])).toBe(
-      '["docker","singularity"]'
-    )
+    expect(encodeOutput(['docker', 'singularity'])).toBe('["docker","singularity"]')
   })
 
   it('encodes a number array as JSON', () => {
