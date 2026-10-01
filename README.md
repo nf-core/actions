@@ -136,12 +136,22 @@ action pin already fixes a version, and every hook's own version is already pinn
 ```yaml
 # .github/workflows/fix-linting.yml in a pipeline repo
 name: fix-linting
-on: { issue_comment: { types: [created] } }
-concurrency: ${{ github.workflow }}-${{ github.event.issue.number }}
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+
 jobs:
   fix-linting:
     uses: nf-core/actions/.github/workflows/fix-linting.yml@v1
-    permissions: { actions: read, contents: read, issues: write, pull-requests: read }
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: read
     secrets:
       BOT_TOKEN: ${{ secrets.nf_core_bot_auth_token }}
 ```
@@ -157,15 +167,8 @@ The calling job grants `actions: read`, `contents: read`, `issues: write`, and `
 holds, never widen them, so a job here that granted only, say, `contents: read` would make GitHub reject the run at
 validation the moment `push-fix` tried to use `issues: write` to react to the comment.
 
-The stub does not filter comments itself: `acknowledge` in `fix-linting.yml` already skips every comment that is not
-`@nf-core-bot fix linting` on a pull request, and GitHub creates a run for each `issue_comment` either way.
-
 The `concurrency` group has no `cancel-in-progress`: a second "fix linting" comment on the same pull request queues
-behind the first instead of racing it mid-push. It has to live in the stub, because a called workflow cannot set
-workflow-level `concurrency`, and a job-level group on `push-fix` alone would still let both runs' `prepare-fix` read
-the same head. Any comment on the pull request joins the group, so a fix request still pending behind another run can be
-replaced by a later unrelated comment; that needs two comments within seconds of each other, and commenting again
-recovers it.
+behind the first instead of racing it mid-push, which could otherwise fail with a non-fast-forward push.
 
 ### Migrating from the vendored workflow
 
