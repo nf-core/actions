@@ -117,12 +117,15 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
 
       - name: Create release tag and move the major tag
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.prepare.outputs.version }}
           MAJOR: ${{ needs.prepare.outputs.major }}
         run: |
+          gh auth setup-git
           git config user.name "nf-core-bot"
           git config user.email "core@nf-co.re"
 
