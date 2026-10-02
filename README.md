@@ -147,6 +147,8 @@ concurrency:
 jobs:
   fix-linting:
     uses: nf-core/actions/.github/workflows/fix-linting.yml@v1
+    with:
+      nextflow-versions: '["25.10.4","latest-everything"]'
     permissions:
       actions: read
       contents: read
