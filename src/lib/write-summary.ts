@@ -10,8 +10,6 @@ export async function writeSummaryBestEffort(): Promise<void> {
   try {
     await core.summary.write()
   } catch (error) {
-    core.warning(
-      `Could not write the job summary: ${error instanceof Error ? error.message : String(error)}`
-    )
+    core.warning(`Could not write the job summary: ${error instanceof Error ? error.message : String(error)}`)
   }
 }

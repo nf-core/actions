@@ -7,9 +7,7 @@ describe('parseMaxSizeBytes', () => {
   })
 
   it('parses the default value', () => {
-    expect(parseMaxSizeBytes(String(DEFAULT_MAX_SIZE_BYTES))).toBe(
-      DEFAULT_MAX_SIZE_BYTES
-    )
+    expect(parseMaxSizeBytes(String(DEFAULT_MAX_SIZE_BYTES))).toBe(DEFAULT_MAX_SIZE_BYTES)
   })
 
   it('rejects zero', () => {

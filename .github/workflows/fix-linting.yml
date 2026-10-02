@@ -23,17 +23,16 @@ on:
     inputs:
       nextflow-versions:
         description: >-
-          Nextflow versions, as a JSON array of strings. The lint hooks run with
-          the first entry. Pass the same value as the 'linting.yml' stub.
+          Nextflow versions, as a JSON array of strings. The lint hooks run with the first entry. Pass the same value as
+          the 'linting.yml' stub.
         type: string
         required: false
         default: '["25.10.4","latest-everything"]'
     secrets:
       BOT_TOKEN:
         description: >-
-          Push credential for the bot account, used only in 'push-fix' to commit
-          and push the validated patch. Optional so a pipeline that omits it
-          gets a clear failure instead of a silent push with the default token.
+          Push credential for the bot account, used only in 'push-fix' to commit and push the validated patch. Optional
+          so a pipeline that omits it gets a clear failure instead of a silent push with the default token.
         required: false
 
 permissions: {}
@@ -44,8 +43,7 @@ jobs:
     # issue_comment fires for both issues and pull requests; 'pull_request'
     # is only present on the payload's 'issue' object when it is one.
     if: >-
-      github.event.issue.pull_request && contains(github.event.comment.body,
-      '@nf-core-bot fix linting')
+      github.event.issue.pull_request && contains(github.event.comment.body, '@nf-core-bot fix linting')
     runs-on: ubuntu-latest
     # Tightest bound that still leaves room for GitHub's API: this job makes
     # a handful of quick calls and reacts to the comment, nothing else.
@@ -130,10 +128,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COMMENT_ID: ${{ github.event.comment.id }}
-        run:
-          gh api --method POST
-          "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions"
-          -f content='eyes'
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions" -f content='eyes'
 
   prepare-fix:
     name: prepare-fix
@@ -296,10 +291,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COMMENT_ID: ${{ github.event.comment.id }}
-        run:
-          gh api --method POST
-          "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions"
-          -f content='+1'
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions" -f content='+1'
 
       - name: React if linting errors were fixed
         if: steps.commit-and-push.outcome == 'success'
@@ -307,22 +299,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           COMMENT_ID: ${{ github.event.comment.id }}
         run:
-          gh api --method POST
-          "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions"
-          -f content='hooray'
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions" -f content='hooray'
 
       - name: React and comment if linting was not fixed
-        if:
-          ${{ always() && (failure() || needs.prepare-fix.result != 'success')
-          }}
+        if: ${{ always() && (failure() || needs.prepare-fix.result != 'success') }}
         env:
           ACTOR: ${{ github.actor }}
           COMMENT_ID: ${{ github.event.comment.id }}
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.issue.number }}
-          RUN_URL:
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
-            github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}/reactions" -f content='confused'
           gh pr comment "$PR_NUMBER" --body "@${ACTOR} I tried to fix the linting errors, but it didn't work. Please fix them manually.

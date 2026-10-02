@@ -18,9 +18,7 @@ describe('writeSummaryBestEffort', () => {
   })
 
   it('warns and does not throw when the summary fails to write, for example GITHUB_STEP_SUMMARY unset', async () => {
-    write.mockRejectedValue(
-      new Error('ENOENT: no such file or directory, open undefined')
-    )
+    write.mockRejectedValue(new Error('ENOENT: no such file or directory, open undefined'))
     await expect(writeSummaryBestEffort()).resolves.toBeUndefined()
     expect(warning).toHaveBeenCalledWith(expect.stringContaining('ENOENT'))
   })

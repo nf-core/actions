@@ -21,9 +21,7 @@ const buildable = new Set(entries.map((entry) => entry.name))
 const missing = subdirs.filter((name) => !buildable.has(name))
 
 if (missing.length > 0) {
-  console.error(
-    `::error::These src/actions subdirectories have no index.ts: ${missing.join(', ')}`
-  )
+  console.error(`::error::These src/actions subdirectories have no index.ts: ${missing.join(', ')}`)
   process.exit(1)
 }
 
@@ -35,16 +33,12 @@ const missingActionYml = entries
   .filter((name) => !existsSync(join(actionsDir, name, 'action.yml')))
 
 if (missingActionYml.length > 0) {
-  console.error(
-    `::error::These actions have no actions/<name>/action.yml: ${missingActionYml.join(', ')}`
-  )
+  console.error(`::error::These actions have no actions/<name>/action.yml: ${missingActionYml.join(', ')}`)
   process.exit(1)
 }
 
 if (!existsSync(rollupBin)) {
-  console.error(
-    '::error::Local Rollup binary not found at node_modules/rollup/dist/bin/rollup. Run npm ci.'
-  )
+  console.error('::error::Local Rollup binary not found at node_modules/rollup/dist/bin/rollup. Run npm ci.')
   process.exit(1)
 }
 
@@ -52,13 +46,7 @@ if (!existsSync(rollupBin)) {
 // different Rollup version and does not launch npx.cmd on Windows.
 const result = spawnSync(
   process.execPath,
-  [
-    rollupBin,
-    '--config',
-    rollupConfig,
-    '--configPlugin',
-    '@rollup/plugin-typescript'
-  ],
+  [rollupBin, '--config', rollupConfig, '--configPlugin', '@rollup/plugin-typescript'],
   { stdio: 'inherit', cwd: repoRoot }
 )
 

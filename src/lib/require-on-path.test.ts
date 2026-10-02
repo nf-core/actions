@@ -9,9 +9,7 @@ const { requireOnPath } = await import('./require-on-path.js')
 describe('requireOnPath', () => {
   it('resolves when the tool is on PATH', async () => {
     which.mockResolvedValue('/usr/bin/nf-test')
-    await expect(
-      requireOnPath('nf-test', 'install it first')
-    ).resolves.toBeUndefined()
+    await expect(requireOnPath('nf-test', 'install it first')).resolves.toBeUndefined()
   })
 
   it('throws a message naming the tool and the install hint when missing', async () => {
