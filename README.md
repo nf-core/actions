@@ -153,7 +153,7 @@ jobs:
       actions: read
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     secrets:
       BOT_TOKEN: ${{ secrets.nf_core_bot_auth_token }}
 ```
@@ -164,10 +164,10 @@ token. `secrets.nf_core_bot_auth_token` above is the existing organisation secre
 repos; only the name on the left, `BOT_TOKEN`, is this workflow's own contract, so a pipeline whose bot secret is named
 differently only needs to change the right-hand side.
 
-The calling job grants `actions: read`, `contents: read`, `issues: write`, and `pull-requests: read`: the union of what
+The calling job grants `actions: read`, `contents: read`, `issues: write`, and `pull-requests: write`: the union of what
 `fix-linting.yml`'s three jobs request between them. A called workflow can only narrow the permissions the calling job
 holds, never widen them, so a job here that granted only, say, `contents: read` would make GitHub reject the run at
-validation the moment `push-fix` tried to use `issues: write` to react to the comment.
+validation the moment `acknowledge` tried to use `pull-requests: write` to react to the comment.
 
 The `concurrency` group has no `cancel-in-progress`: a second "fix linting" comment on the same pull request queues
 behind the first instead of racing it mid-push, which could otherwise fail with a non-fast-forward push.

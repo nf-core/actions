@@ -54,9 +54,11 @@ jobs:
     # permission, which every token already holds, but an 'issues: write'
     # -only token still gets a 403 calling it. 'contents: read' is the
     # permission that has been observed to fix that in GitHub Actions.
+    # 'pull-requests: write' is needed to react to a pull request comment.
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       # The bot pushes to the pull request head branch with an
       # organisation-wide token. A branch that is not protected only needs
@@ -217,10 +219,11 @@ jobs:
     # Looser than 'prepare-fix': this job runs no pull request code, only
     # its own checkout, patch download, apply, commit, and push.
     timeout-minutes: 12
+    # 'pull-requests: write' for the reactions and 'gh pr comment' below.
     permissions:
       actions: read
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: write
     steps:
       - name: Checkout
